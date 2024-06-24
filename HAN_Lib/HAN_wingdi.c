@@ -141,66 +141,56 @@ HANSTATIC LRESULT CALLBACK HANInputWndProc(HWND hInput, UINT message, WPARAM wPa
             ipInfo->hRightText = CreateWindow(
                 TEXT("static"), NULL, WS_CHILD | WS_VISIBLE | SS_LEFT | SS_CENTERIMAGE,
                 xRightText, 0, nWinW - xRightText, nWinH, hInput, (HMENU)HSTBT_WID_RIGHT_TEXT, hInst, NULL);
-
-            break;
-        }
+        } break;
         case WM_CTLCOLORSTATIC: {
             lWndProcRet = (INT_PTR)GetStockObject(NULL_BRUSH);
-            break;
-        }
+        } break;
+        case WM_GETTEXT: {
+            GetWindowText(ipInfo->hInput, (HANPSTR)lParam, (HANINT)wParam);
+        } break;
+        case WM_SETTEXT: {
+            SetWindowText(ipInfo->hInput, (HANPCSTR)lParam);
+        } break;
         case HIPM_SETLEFTTEXTFONT: {
             SendMessage(ipInfo->hLeftText, WM_SETFONT, wParam, lParam);
-            break;
-        }
+        } break;
         case HIPM_SETINPUTFONT: {
             SendMessage(ipInfo->hInput, WM_SETFONT, wParam, lParam);
-            break;
-        }
+        } break;
         case HIPM_SETRIGHTTEXTFONT: {
             SendMessage(ipInfo->hRightText, WM_SETFONT, wParam, lParam);
-            break;
-        }
+        } break;
         case HIPM_MOVELEFTTEXT: {
             s_HANInputMoveWindow(ipInfo->hLeftText, (RECT*)lParam, (BOOL)wParam);
-            break;
-        }
+        } break;
         case HIPM_MOVEINPUT: {
             s_HANInputMoveWindow(ipInfo->hInput, (RECT*)lParam, (BOOL)wParam);
-            break;
-        }
+        } break;
         case HIPM_MOVERIGHTTEXT: {
             s_HANInputMoveWindow(ipInfo->hRightText, (RECT*)lParam, (BOOL)wParam);
-            break;
-        }
+        } break;
         case HIPM_SETLEFTTEXTTEXT: {
             SetWindowText(ipInfo->hLeftText, (HANPCSTR)lParam);
-            break;
-        }
+        } break;
         case HIPM_SETINPUTTEXT: {
             SetWindowText(ipInfo->hInput, (HANPCSTR)lParam);
-            break;
-        }
+        } break;
         case HIPM_SETRIGHTTEXTTEXT: {
             SetWindowText(ipInfo->hRightText, (HANPCSTR)lParam);
-            break;
-        }
+        } break;
         case HIPM_GETLEFTTEXTTEXT: {
             GetWindowText(ipInfo->hLeftText, (HANPSTR)lParam, (int)wParam);
-            break;
-        }
+        } break;
         case HIPM_GETINPUTTEXT: {
             GetWindowText(ipInfo->hInput, (HANPSTR)lParam, (int)wParam);
-            break;
-        }
+        } break;
         case HIPM_GETRIGHTTEXTTEXT: {
             GetWindowText(ipInfo->hRightText, (HANPSTR)lParam, (int)wParam);
-            break;
-        }
+        } break;
 
         default: {
             lWndProcRet = DefWindowProc(hInput, message, wParam, lParam);
-            break;
-        }
+        } break;
     }
 
     return lWndProcRet;
@@ -305,22 +295,22 @@ HANSTATIC LRESULT CALLBACK HANStateButtonWndProc(HWND hStateButton, UINT message
                 0, 0, nWinW, nWinH, hStateButton, (HMENU)HSTBT_WID_BUTTON, hInst, NULL);
 
             sbInfo->pParam = ((LPCREATESTRUCT)lParam)->lpCreateParams;
-
-            break;
-        }
+        } break;
         case WM_COMMAND: {
             switch (LOWORD(wParam)) {
                 case HSTBT_WID_BUTTON: {
                     HANStateButtonButtonAction(hStateButton, sbInfo);
-                    break;
-                }
+                } break;
 
                 default: {
-                    break;
-                }
+                    /* idle */
+                } break;
             }
             break;
         }
+        case WM_SETFONT: {
+            SendMessage(sbInfo->hButton, WM_SETFONT, wParam, lParam);
+        } break;
         case HSTBTM_ADDSTATE: {
             lWndProcRet = s_HANStateButtonAddState(sbInfo, (HPCSTBTSTATE)lParam);
             break;
@@ -800,8 +790,8 @@ HANSTATIC void HANCOMParityAction(HANPCOM hcInfo, WPARAM wParam)
 {
     switch (HIWORD(wParam)) {
         case CBN_SELCHANGE: {
-            BYTE nParity = ComboBoxGetCursel(hcInfo->hParity);
-            if (CB_ERR != nParity) { s_HANCOMSetParity(hcInfo, nParity); }
+            int nParity = ComboBoxGetCursel(hcInfo->hParity);
+            if (CB_ERR != nParity) { s_HANCOMSetParity(hcInfo, (BYTE)nParity); }
             break;
         }
 
@@ -814,8 +804,8 @@ HANSTATIC void HANCOMStopBitsAction(HANPCOM hcInfo, WPARAM wParam)
 {
     switch (HIWORD(wParam)) {
         case CBN_SELCHANGE: {
-            BYTE nStopBits = ComboBoxGetCursel(hcInfo->hStopBits);
-            if (CB_ERR != nStopBits) { s_HANCOMSetByteSize(hcInfo, nStopBits); }
+            int nStopBits = ComboBoxGetCursel(hcInfo->hStopBits);
+            if (CB_ERR != nStopBits) { s_HANCOMSetByteSize(hcInfo, (BYTE)nStopBits); }
             break;
         }
 

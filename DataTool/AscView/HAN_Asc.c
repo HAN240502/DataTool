@@ -320,6 +320,9 @@ static LRESULT CreateAction(HWND hWnd, LPARAM lParam)
 }
 static void CommandAction(HWND hWnd, PASCVIEWWNDEXTRA avInfo, WPARAM wParam, LPARAM lParam)
 {
+    (void)hWnd;
+    (void)lParam;
+
     switch (LOWORD(wParam)) {
         case WID_OPEN_ASC_FILE_BUTTON: {
             OpenFileAction(avInfo);

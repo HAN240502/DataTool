@@ -4,6 +4,11 @@ static uint32_t RefData(uint32_t data, uint8_t len);
 
 uint8_t CRC_SafeSPI(const uint32_t message, uint8_t len, uint8_t poly, uint8_t start_value)
 {
+    (void)message;
+    (void)len;
+    (void)poly;
+    (void)start_value;
+    
     return 0;
 }
 

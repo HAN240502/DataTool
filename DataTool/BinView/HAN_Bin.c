@@ -3,6 +3,9 @@
 #include "..\HexView\HAN_Hex.h"
 #include "HAN_Bin.h"
 
+#define INI_BIN_VIEW_VALUE_SIZE         INI_MAIN_VALUE_STR_SIZE
+#define INI_BIN_VIEW_APP_NAME           TEXT("bvConfig")
+
 #define BIN_VIEW_ADDR_STATIC_W      270
 #define BIN_VIEW_CRC_RANGE_START_W  107
 #define BIN_VIEW_CRC_RANGE_END_W    45
@@ -53,7 +56,15 @@ typedef struct tagBINVIEWWNDEXTRA {
     HFONT           hHexFont;
     HFONT           hSysFont;
     BOOL            bBinOpen;
+    BINVIEWCFG      pBvConfig;
 } BINVIEWWNDEXTRA, * PBINVIEWWNDEXTRA;
+
+typedef struct tagBINVIEWREADWRITECFG {
+    HANPCSTR            pKey;
+    HANPCSTR            pDefValue;
+    void                (*CfgWindowToText)(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText);
+    void                (*CfgTextToWindow)(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText);
+} BINVIEWREADWRITECFG;
 
 typedef struct tagCRCINFO {
     HANCHAR     pCrcName[CRC_NAME_MAX_CNT];
@@ -84,7 +95,41 @@ static uint32_t BinView_CRC16_DNP(const uint8_t* pData, uint32_t nLen) { return 
 static uint32_t BinView_CRC32_STD(const uint8_t* pData, uint32_t nLen) { return CRC32_STD(pData, nLen); }
 static uint32_t BinView_CRC32_MPEG2(const uint8_t* pData, uint32_t nLen) { return CRC32_MPEG2(pData, nLen); }
 
-const static CRCINFO g_pCrcInfo[] = {
+static LRESULT CALLBACK BinViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+static LRESULT CreateAction(HWND hWnd, LPARAM lParam);
+static void LoadBinViewCfg(PBINVIEWWNDEXTRA bvInfo, PBINVIEWCFG pBvConfig);
+static void CommandAction(HWND hWnd, PBINVIEWWNDEXTRA bvInfo, WPARAM wParam, LPARAM lParam);
+static HAN_errno_t OpenFileAction(PBINVIEWWNDEXTRA bvInfo);
+static void PrintBinView(PBINVIEWWNDEXTRA bvInfo);
+static void SaveHexFileAction(PBINVIEWWNDEXTRA bvInfo);
+static BOOL GetZeroBase(PBINVIEWWNDEXTRA bvInfo);
+static uint32_t GetStartAddr(PBINVIEWWNDEXTRA bvInfo);
+static void UpdateAddrOffset(PBINVIEWWNDEXTRA bvInfo);
+static void SetDataAction(PBINVIEWWNDEXTRA bvInfo);
+static void SetCrcAction(PBINVIEWWNDEXTRA bvInfo);
+static void InitAddrInput(PBINVIEWWNDEXTRA bvInfo);
+
+static void CfgWindowToTextSaveStartZero(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText);
+static void CfgWindowToTextSaveStartAddr(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText);
+static void CfgWindowToTextSaveLen(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText);
+static void CfgWindowToTextDataPos(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText);
+static void CfgWindowToTextDataLen(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText);
+static void CfgWindowToTextParityName(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText);
+static void CfgWindowToTextParityStart(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText);
+static void CfgWindowToTextParityEnd(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText);
+static void CfgWindowToTextParityPos(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText);
+
+static void CfgTextToWindowSaveStartZero(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText);
+static void CfgTextToWindowSaveStartAddr(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText);
+static void CfgTextToWindowSaveLen(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText);
+static void CfgTextToWindowDataPos(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText);
+static void CfgTextToWindowDataLen(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText);
+static void CfgTextToWindowParityName(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText);
+static void CfgTextToWindowParityStart(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText);
+static void CfgTextToWindowParityEnd(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText);
+static void CfgTextToWindowParityPos(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText);
+
+static const CRCINFO g_pCrcInfo[] = {
     { .pCrcName = TEXT("CRC4_ITU"), .CrcAction = BinView_CRC4_ITU, .nCrcValueSize = 1, },
     { .pCrcName = TEXT("CRC5_EPC"), .CrcAction = BinView_CRC5_EPC, .nCrcValueSize = 1, },
     { .pCrcName = TEXT("CRC5_ITU"), .CrcAction = BinView_CRC5_ITU, .nCrcValueSize = 1, },
@@ -108,19 +153,62 @@ const static CRCINFO g_pCrcInfo[] = {
     { .pCrcName = TEXT("CRC32_STD"), .CrcAction = BinView_CRC32_STD, .nCrcValueSize = 4, },
     { .pCrcName = TEXT("CRC32_MPEG2"), .CrcAction = BinView_CRC32_MPEG2, .nCrcValueSize = 4, },
 };
-
-static LRESULT CALLBACK BinViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-static LRESULT CreateAction(HWND hWnd, LPARAM lParam);
-static void CommandAction(HWND hWnd, PBINVIEWWNDEXTRA bvInfo, WPARAM wParam, LPARAM lParam);
-static HAN_errno_t OpenFileAction(PBINVIEWWNDEXTRA bvInfo);
-static void PrintBinView(PBINVIEWWNDEXTRA bvInfo);
-static void SaveHexFileAction(PBINVIEWWNDEXTRA bvInfo);
-static BOOL GetZeroBase(PBINVIEWWNDEXTRA bvInfo);
-static uint32_t GetStartAddr(PBINVIEWWNDEXTRA bvInfo);
-static void UpdateAddrOffset(PBINVIEWWNDEXTRA bvInfo);
-static void SetDataAction(PBINVIEWWNDEXTRA bvInfo);
-static void SetCrcAction(PBINVIEWWNDEXTRA bvInfo);
-static void InitAddrInput(PBINVIEWWNDEXTRA bvInfo);
+static const BINVIEWREADWRITECFG sg_pBinViewCfgInfo[INI_BIN_VIEW_CFG_CNT] = {
+    [INI_BIN_VIEW_SAVE_START_ZERO] = {
+        .pKey = TEXT("SaveStartZero"),
+        .pDefValue = TEXT("FALSE"),
+        .CfgWindowToText = CfgWindowToTextSaveStartZero,
+        .CfgTextToWindow = CfgTextToWindowSaveStartZero,
+    },
+    [INI_BIN_VIEW_SAVE_START_ADDR] = {
+        .pKey = TEXT("SaveStartAddr"),
+        .pDefValue = DEFAULT_START_ADDR_TEXT,
+        .CfgWindowToText = CfgWindowToTextSaveStartAddr,
+        .CfgTextToWindow = CfgTextToWindowSaveStartAddr,
+    },
+    [INI_BIN_VIEW_SAVE_LEN] = {
+        .pKey = TEXT("SaveLen"),
+        .pDefValue = TEXT(""),
+        .CfgWindowToText = CfgWindowToTextSaveLen,
+        .CfgTextToWindow = CfgTextToWindowSaveLen,
+    },
+    [INI_BIN_VIEW_DATA_POS] = {
+        .pKey = TEXT("DataPos"),
+        .pDefValue = DEFAULT_DATA_POS_TEXT,
+        .CfgWindowToText = CfgWindowToTextDataPos,
+        .CfgTextToWindow = CfgTextToWindowDataPos,
+    },
+    [INI_BIN_VIEW_DATA_LEN] = {
+        .pKey = TEXT("DataLen"),
+        .pDefValue = TEXT(""),
+        .CfgWindowToText = CfgWindowToTextDataLen,
+        .CfgTextToWindow = CfgTextToWindowDataLen,
+    },
+    [INI_BIN_VIEW_PARITY_NAME] = {
+        .pKey = TEXT("ParityName"),
+        .pDefValue = TEXT("0"),
+        .CfgWindowToText = CfgWindowToTextParityName,
+        .CfgTextToWindow = CfgTextToWindowParityName,
+    },
+    [INI_BIN_VIEW_PARITY_START] = {
+        .pKey = TEXT("ParityStart"),
+        .pDefValue = DEFAULT_CRC_START_TEXT,
+        .CfgWindowToText = CfgWindowToTextParityStart,
+        .CfgTextToWindow = CfgTextToWindowParityStart,
+    },
+    [INI_BIN_VIEW_PARITY_END] = {
+        .pKey = TEXT("ParityEnd"),
+        .pDefValue = DEFAULT_CRC_END_TEXT,
+        .CfgWindowToText = CfgWindowToTextParityEnd,
+        .CfgTextToWindow = CfgTextToWindowParityEnd,
+    },
+    [INI_BIN_VIEW_PARITY_POS] = {
+        .pKey = TEXT("ParityPos"),
+        .pDefValue = DEFAULT_CRC_POS_TEXT,
+        .CfgWindowToText = CfgWindowToTextParityPos,
+        .CfgTextToWindow = CfgTextToWindowParityPos,
+    },
+};
 
 void RegisterHANBinView(HINSTANCE hInst)
 {
@@ -139,6 +227,36 @@ void RegisterHANBinView(HINSTANCE hInst)
         .hIconSm        = NULL,
     };
     RegisterClassEx(&wcex);
+}
+
+void ReadBinViewIniFile(HANPCSTR pIniPath, void* pParam)
+{
+    PBINVIEWCFG pBvConfig = pParam;
+    INIBINVIEWCFGID iLoop;
+
+    for (iLoop = 0; iLoop < INI_BIN_VIEW_CFG_CNT; iLoop++)
+    {
+        HAN_strcpy(pBvConfig->pSysConfig[iLoop].pKey, sg_pBinViewCfgInfo[iLoop].pKey);
+        HAN_strcpy(pBvConfig->pSysConfig[iLoop].pDefValue, sg_pBinViewCfgInfo[iLoop].pDefValue);
+        GetPrivateProfileString(
+            INI_BIN_VIEW_APP_NAME, pBvConfig->pSysConfig[iLoop].pKey, pBvConfig->pSysConfig[iLoop].pDefValue,
+            pBvConfig->pSysConfig[iLoop].pValue, INI_BIN_VIEW_VALUE_SIZE, pIniPath);
+    }
+}
+
+void WriteBinViewIniFile(HANPCSTR pIniPath, HWND hBinView)
+{
+    PBINVIEWWNDEXTRA bvInfo = (PBINVIEWWNDEXTRA)GetWindowLongPtr(hBinView, 0);
+    HANCHAR pBvCfg[INI_BIN_VIEW_CFG_CNT][INI_BIN_VIEW_VALUE_SIZE];
+    INIBINVIEWCFGID iLoop;
+    
+    for (iLoop = 0; iLoop < INI_BIN_VIEW_CFG_CNT; iLoop++)
+    {
+        sg_pBinViewCfgInfo[iLoop].CfgWindowToText(bvInfo, pBvCfg[iLoop]);
+        WritePrivateProfileString(
+            INI_BIN_VIEW_APP_NAME, sg_pBinViewCfgInfo[iLoop].pKey, pBvCfg[iLoop], pIniPath
+        );
+    }
 }
 
 HAN_errno_t HANOpenBinFile(PBINFILE pBinFile, HANPCSTR pFileName, HANDLE hHeap)
@@ -259,7 +377,7 @@ static LRESULT CALLBACK BinViewWndProc(HWND hBinView, UINT message, WPARAM wPara
     LRESULT lWndProcRet = 0;
 
     // ¶ÁÈ¡ÊôÐÔ
-    PBINVIEWWNDEXTRA hvInfo = (PBINVIEWWNDEXTRA)GetWindowLongPtr(hBinView, 0);
+    PBINVIEWWNDEXTRA bvInfo = (PBINVIEWWNDEXTRA)GetWindowLongPtr(hBinView, 0);
 
     switch (message) {
         case WM_CREATE: {
@@ -267,7 +385,7 @@ static LRESULT CALLBACK BinViewWndProc(HWND hBinView, UINT message, WPARAM wPara
             break;
         }
         case WM_COMMAND: {
-            CommandAction(hBinView, hvInfo, wParam, lParam);
+            CommandAction(hBinView, bvInfo, wParam, lParam);
             break;
         }
         case WM_CTLCOLORSTATIC: {
@@ -287,6 +405,7 @@ static LRESULT CreateAction(HWND hWnd, LPARAM lParam)
     LRESULT lWndProcRet = 0;
     PBINVIEWWNDEXTRA bvInfo;
     HINSTANCE hInst = ((LPCREATESTRUCT)lParam)->hInstance;
+    PBINVIEWCFG pBvConfig = ((LPCREATESTRUCT)lParam)->lpCreateParams;
     RECT rcClientSize;
 
     HANDLE hHeap = GetProcessHeap();
@@ -397,12 +516,29 @@ static LRESULT CreateAction(HWND hWnd, LPARAM lParam)
         SendMessage(bvInfo->hBinViewEdit, WM_SETFONT, (WPARAM)(bvInfo->hHexFont), (LPARAM)TRUE);
 
         bvInfo->bBinOpen = FALSE;
+
+        if (NULL != pBvConfig)
+        {
+            (void)memcpy(&(bvInfo->pBvConfig), pBvConfig, sizeof(bvInfo->pBvConfig));
+            LoadBinViewCfg(bvInfo, pBvConfig);
+        }
     }
 
     return lWndProcRet;
 }
+static void LoadBinViewCfg(PBINVIEWWNDEXTRA bvInfo, PBINVIEWCFG pBvConfig)
+{
+    INIBINVIEWCFGID iLoop;
+
+    for (iLoop = 0; iLoop < INI_BIN_VIEW_CFG_CNT; iLoop++)
+    {
+        sg_pBinViewCfgInfo[iLoop].CfgTextToWindow(bvInfo, pBvConfig->pSysConfig[iLoop].pValue);
+    }
+}
 static void CommandAction(HWND hWnd, PBINVIEWWNDEXTRA bvInfo, WPARAM wParam, LPARAM lParam)
 {
+    (void)lParam;
+    
     switch (LOWORD(wParam)) {
         case WID_OPEN_BIN_FILE: {
             OpenFileAction(bvInfo);
@@ -670,4 +806,162 @@ static void InitAddrInput(PBINVIEWWNDEXTRA bvInfo)
     HANInputSetInputText(bvInfo->hCrcPos, DEFAULT_CRC_POS_TEXT);
     HANInputSetLeftTextFont(bvInfo->hCrcPos, bvInfo->hHexFont, TRUE);
     HANInputSetInputFont(bvInfo->hCrcPos, bvInfo->hHexFont, TRUE);
+}
+
+static void CfgWindowToTextSaveStartZero(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText)
+{
+    HANINT bCheck = ButtonGetCheck(bvInfo->hZeroBase);
+
+    if (BST_CHECKED == bCheck) { HAN_snprintf(pText, INI_BIN_VIEW_VALUE_SIZE, TEXT("TRUE")); }
+    else { HAN_snprintf(pText, INI_BIN_VIEW_VALUE_SIZE, TEXT("FALSE")); }
+}
+static void CfgWindowToTextSaveStartAddr(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText)
+{
+    HANCHAR pTempText[INI_BIN_VIEW_VALUE_SIZE];
+    HANSIZE cAddr;
+
+    GetWindowText(bvInfo->hStartAddr, pTempText, INI_BIN_VIEW_VALUE_SIZE);
+    cAddr = HAN_strtoul(pTempText, NULL, 16);
+    HAN_snprintf(pText, INI_BIN_VIEW_VALUE_SIZE, ADDR_PRINT_FORMAT_SINGLE, cAddr);
+}
+static void CfgWindowToTextSaveLen(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText)
+{
+    HANSIZE nLen;
+
+    GetWindowText(bvInfo->hLen, pText, INI_BIN_VIEW_VALUE_SIZE);
+    if (0 < HAN_strlen(pText))
+    {
+        nLen = HAN_strtoul(pText, NULL, 16);
+        HAN_snprintf(pText, INI_BIN_VIEW_VALUE_SIZE, ADDR_PRINT_FORMAT_SINGLE, nLen);
+    }
+}
+static void CfgWindowToTextDataPos(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText)
+{
+    HANCHAR pTempText[INI_BIN_VIEW_VALUE_SIZE];
+    HANSIZE nPos;
+
+    GetWindowText(bvInfo->hDataPos, pTempText, INI_BIN_VIEW_VALUE_SIZE);
+    nPos = HAN_strtoul(pTempText, NULL, 16);
+    HAN_snprintf(pText, INI_BIN_VIEW_VALUE_SIZE, ADDR_PRINT_FORMAT_SINGLE, nPos);
+}
+static void CfgWindowToTextDataLen(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText)
+{
+    HANSIZE nLen;
+
+    GetWindowText(bvInfo->hDataLen, pText, INI_BIN_VIEW_VALUE_SIZE);
+    if (0 < HAN_strlen(pText))
+    {
+        nLen = HAN_strtoul(pText, NULL, 16);
+        HAN_snprintf(pText, INI_BIN_VIEW_VALUE_SIZE, ADDR_PRINT_FORMAT_SINGLE, nLen);
+    }
+}
+static void CfgWindowToTextParityName(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText)
+{
+    HANINT nId = ComboBoxGetCursel(bvInfo->hCrcList);
+
+    if (CB_ERR == nId) { nId = DEFAULT_CRC_ID; }
+    HAN_snprintf(pText, INI_BIN_VIEW_VALUE_SIZE, TEXT("%d"), nId);
+}
+static void CfgWindowToTextParityStart(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText)
+{
+    HANCHAR pTempText[INI_BIN_VIEW_VALUE_SIZE];
+    HANSIZE cAddr;
+
+    GetWindowText(bvInfo->hCrcStart, pTempText, INI_BIN_VIEW_VALUE_SIZE);
+    cAddr = HAN_strtoul(pTempText, NULL, 16);
+    HAN_snprintf(pText, INI_BIN_VIEW_VALUE_SIZE, ADDR_PRINT_FORMAT_SINGLE, cAddr);
+}
+static void CfgWindowToTextParityEnd(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText)
+{
+    HANCHAR pTempText[INI_BIN_VIEW_VALUE_SIZE];
+    HANSIZE cAddr;
+
+    GetWindowText(bvInfo->hCrcEnd, pTempText, INI_BIN_VIEW_VALUE_SIZE);
+    cAddr = HAN_strtoul(pTempText, NULL, 16);
+    HAN_snprintf(pText, INI_BIN_VIEW_VALUE_SIZE, ADDR_PRINT_FORMAT_SINGLE, cAddr);
+}
+static void CfgWindowToTextParityPos(PBINVIEWWNDEXTRA bvInfo, HANPSTR pText)
+{
+    HANCHAR pTempText[INI_BIN_VIEW_VALUE_SIZE];
+    HANSIZE nPos;
+
+    GetWindowText(bvInfo->hCrcPos, pTempText, INI_BIN_VIEW_VALUE_SIZE);
+    nPos = HAN_strtoul(pTempText, NULL, 16);
+    HAN_snprintf(pText, INI_BIN_VIEW_VALUE_SIZE, ADDR_PRINT_FORMAT_SINGLE, nPos);
+}
+
+static void CfgTextToWindowSaveStartZero(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText)
+{
+    if (0 == HAN_strcmp(pText, TEXT("TRUE"))) { ButtonSetChecked(bvInfo->hZeroBase); }
+    else { ButtonSetUnchecked(bvInfo->hZeroBase); }
+}
+static void CfgTextToWindowSaveStartAddr(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText)
+{
+    HANSIZE cAddr = HAN_strtoul(pText, NULL, 16);
+    HANCHAR pTempText[ADDR_STR_SIZE];
+
+    HAN_snprintf(pTempText, ADDR_STR_SIZE, ADDR_PRINT_FORMAT_FULL, cAddr);
+    SetWindowText(bvInfo->hStartAddr, pTempText);
+}
+static void CfgTextToWindowSaveLen(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText)
+{
+    HANSIZE nLen = HAN_strtoul(pText, NULL, 16);
+    HANCHAR pTempText[ADDR_STR_SIZE];
+
+    if (0 < HAN_strlen(pText))
+    {
+        HAN_snprintf(pTempText, ADDR_STR_SIZE, ADDR_PRINT_FORMAT_SINGLE, nLen);
+        SetWindowText(bvInfo->hLen, pTempText);
+    }
+}
+static void CfgTextToWindowDataPos(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText)
+{
+    HANSIZE nPos = HAN_strtoul(pText, NULL, 16);
+    HANCHAR pTempText[ADDR_STR_SIZE];
+
+    HAN_snprintf(pTempText, ADDR_STR_SIZE, ADDR_PRINT_FORMAT_FULL, nPos);
+    SetWindowText(bvInfo->hDataPos, pTempText);
+}
+static void CfgTextToWindowDataLen(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText)
+{
+    HANSIZE nLen = HAN_strtoul(pText, NULL, 16);
+    HANCHAR pTempText[ADDR_STR_SIZE];
+
+    if (0 < HAN_strlen(pText))
+    {
+        HAN_snprintf(pTempText, ADDR_STR_SIZE, ADDR_PRINT_FORMAT_SINGLE, nLen);
+        SetWindowText(bvInfo->hDataLen, pTempText);
+    }
+}
+static void CfgTextToWindowParityName(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText)
+{
+    HANINT nId = HAN_strtol(pText, NULL, 10);
+    
+    if (nId < 0) { nId = 0; }
+    if (CRCID_CNT_MAX < nId) { nId = CRCID_CNT_MAX - 1; }
+    ComboBoxSetCursel(bvInfo->hCrcList, nId);
+}
+static void CfgTextToWindowParityStart(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText)
+{
+    HANSIZE cAddr = HAN_strtoul(pText, NULL, 16);
+    HANCHAR pTempText[ADDR_STR_SIZE];
+
+    HAN_snprintf(pTempText, ADDR_STR_SIZE, ADDR_PRINT_FORMAT_SINGLE, cAddr);
+    SetWindowText(bvInfo->hCrcStart, pTempText);
+}
+static void CfgTextToWindowParityEnd(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText)
+{
+    HANSIZE cAddr = HAN_strtoul(pText, NULL, 16);
+    HANCHAR pTempText[ADDR_STR_SIZE];
+
+    HAN_snprintf(pTempText, ADDR_STR_SIZE, ADDR_PRINT_FORMAT_SINGLE, cAddr);
+    SetWindowText(bvInfo->hCrcEnd, pTempText);
+}
+static void CfgTextToWindowParityPos(PBINVIEWWNDEXTRA bvInfo, HANPCSTR pText)
+{
+    HANSIZE nPos = HAN_strtoul(pText, NULL, 16);
+    HANCHAR pTempText[ADDR_STR_SIZE];
+
+    HAN_snprintf(pTempText, ADDR_STR_SIZE, ADDR_PRINT_FORMAT_SINGLE, nPos);
+    SetWindowText(bvInfo->hCrcPos, pTempText);
 }

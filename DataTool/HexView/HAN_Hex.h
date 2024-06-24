@@ -8,23 +8,27 @@ extern "C" {
 #include <stdint.h>
 
 #include "..\..\HAN_Lib\HAN_windows.h"
-#include "..\..\GlobalVariables.h"
+#include "..\DataToolTypedef.h"
 
-#define HAN_HEX_VIEW_CLASS      TEXT("HAN_HexView")
+#define HAN_HEX_VIEW_CLASS              TEXT("HAN_HexView")
 
-#define DEFAULT_START_ADDR      0x80100000
-#define DEFAULT_END_ADDR        0x8020FFFF
-
-#define DEFAULT_START_ADDR_TEXT TEXT("80100000")
-#define DEFAULT_END_ADDR_TEXT   TEXT("8020FFFF")
+#define DEFAULT_START_ADDR              0x00000000
+#define DEFAULT_END_ADDR                0x0000FFFF
+#define DEFAULT_START_ADDR_TEXT         TEXT("00000000")
+#define DEFAULT_END_ADDR_TEXT           TEXT("0000FFFF")
 
 #define SYS_TEXT_W       80
 #define SYS_TEXT_H       21
 
-typedef struct tagADDRMAP {
-    uint32_t        cStartAddr;
-    uint32_t        cEndAddr;
-} ADDRMAP, * PADDRMAP;
+typedef enum {
+    INI_HEX_VIEW_START_ADDR,
+    INI_HEX_VIEW_END_ADDR,
+    INI_HEX_VIEW_CFG_CNT,
+} INIHEXVIEWCFGID;
+
+typedef struct tagHEXVIEWCFG {
+    HANDATAINI          pSysConfig[INI_HEX_VIEW_CFG_CNT];
+} HEXVIEWCFG, * PHEXVIEWCFG;
 
 typedef struct tagHEXRECORD {
     uint8_t     nDataLen;
@@ -47,6 +51,19 @@ typedef struct tagHEXFILE {
 typedef const HEXFILE* PCHEXFILE;
 
 void RegisterHANHexView(HINSTANCE hInst);
+
+/* 初始化配置
+ * pIniPath                 ini 文件路径
+ * pParam                   存放配置的结构体指针
+ */
+void ReadHexViewIniFile(HANPCSTR pIniPath, void* pParam);
+
+/* 保存配置
+ * pIniPath                 ini 文件路径
+ * hHexView                 窗口句柄
+ */
+void WriteHexViewIniFile(HANPCSTR pIniPath, HWND hHexView);
+
 void BinDataToHexFile(HANDLE hFile, uint32_t cStartAddr, uint8_t* pBinData, uint32_t nLen);
 
 void LinkHexFile(HANPCSTR pFileDest, HANCHAR pFileSrc[LINK_FILE_CNT_MAX][PATH_STR_SIZE], uint32_t nLen);

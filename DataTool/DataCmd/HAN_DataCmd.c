@@ -212,6 +212,8 @@ static void RunCmd(PWCHAR pCmd)
 
 static HANDATACMDERR CmdAction_help(char** pCmdParam)
 {
+    (void)pCmdParam;
+
     for (uint32_t i = 1; i < ArrLen(g_pCmdInfo); i++)
     {
         printf("%-12ls", g_pCmdInfo[i].pCmd);
@@ -256,6 +258,8 @@ static HANDATACMDERR CmdAction_hsb(char** pCmdParam)
 }
 static HANDATACMDERR CmdAction_hsfh(char** pCmdParam)
 {
+    (void)pCmdParam;
+    
     return HANDATACMD_OK;
 }
 static HANDATACMDERR CmdAction_hlh(char** pCmdParam)
@@ -276,6 +280,8 @@ static HANDATACMDERR CmdAction_hsl(char** pCmdParam)
 }
 static HANDATACMDERR CmdAction_os(char** pCmdParam)
 {
+    (void)pCmdParam;
+    
     return HANDATACMD_OK;
 }
 static HANDATACMDERR CmdAction_ob(char** pCmdParam)
@@ -363,6 +369,8 @@ static HANDATACMDERR CmdAction_bscp(char** pCmdParam)
 }
 static HANDATACMDERR CmdAction_bsc(char** pCmdParam)
 {
+    (void)pCmdParam;
+    
     printf("写入 crc\n    校验范围：0x%X ~ 0x%X\n    写入位置：0x%X\n", g_nCrcStart, g_nCrcEnd, g_nCrcPos);
     uint32_t nDataLen = g_nCrcEnd - g_nCrcStart + 1;
     uint32_t nCrcSize;

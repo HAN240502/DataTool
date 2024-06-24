@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include "..\..\GlobalVariables.h"
+#include "..\DataToolTypedef.h"
 #include "HAN_FileConversionTypedef.h"
 #include "HAN_FileConversion.h"
 
@@ -16,9 +16,18 @@ extern "C" {
 #define USER_SETTING_KEY_NAME           TEXT("UserConfig")
 
 typedef enum {
-    WM_FILECONVERSIONNOTUSED = WM_USER,
-    WM_FILECONVERSIONGETCFG,                /* 获取配置，wParam：未使用，lParam：HANDATAINI[INI_FILE_CONVERSION_CFG_CNT] */
-} FILECONVERSIONMESSAGE;
+    INI_FILE_CONVERSION_DLL_PATH,
+    INI_FILE_CONVERSION_CONVERT_PATH,
+    INI_FILE_CONVERSION_CONVERT_FOLDER,
+    INI_FILE_CONVERSION_FILTER,
+    INI_FILE_CONVERSION_CFG_CNT,
+} INIFILECONVERSIONCFGID;
+
+typedef struct tagFILECONVERSIONCFG {
+    HANDATAINI          pSysConfig[INI_FILE_CONVERSION_CFG_CNT];
+    USERSETTING         usUserConfig;
+} FILECONVERSIONCFG, * PFILECONVERSIONCFG;
+typedef const FILECONVERSIONCFG* PCFILECONVERSIONCFG;
 
 typedef struct tagFILECONVERSIONWINPARAM {
     FILECONVERSIONPARAM     fcParam;
@@ -31,17 +40,17 @@ typedef const FILECONVERSIONWINPARAM* PCFILECONVERSIONWINPARAM;
  */
 void RegisterHANFileConversion(HINSTANCE hInst);
 
-/* 保存配置
- * hFileConversion          窗口句柄
- * pIniPath                 ini 文件路径
- */
-void WriteFileConversionCfg(HWND hFileConversion, HANPCSTR pIniPath);
-
 /* 初始化配置
- * pFcConfig                存放配置的结构体指针
  * pIniPath                 ini 文件路径
+ * pParam                   存放配置的结构体指针
  */
-void ReadConvertFileIniFile(PFILECONVERSIONCFG pFcConfig, HANPCSTR pIniPath);
+void ReadFileConversionIniFile(HANPCSTR pIniPath, void* pParam);
+
+/* 保存配置
+ * pIniPath                 ini 文件路径
+ * hFileConversion          窗口句柄
+ */
+void WriteFileConversionIniFile(HANPCSTR pIniPath, HWND hFileConversion);
 
 /* 初始化文件转换参数
  * pFcConfig                存放配置的结构体指针

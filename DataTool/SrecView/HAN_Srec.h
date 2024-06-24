@@ -21,6 +21,16 @@ typedef enum {
     SREC_ADDR_SIZE_4 = 4,
 } SRECADDRSIZE;
 
+typedef enum {
+    INI_SREC_VIEW_START_ADDR,
+    INI_SREC_VIEW_END_ADDR,
+    INI_SREC_VIEW_CFG_CNT,
+} INISRECVIEWCFGID;
+
+typedef struct tagSRECVIEWCFG {
+    HANDATAINI          pSysConfig[INI_SREC_VIEW_CFG_CNT];
+} SRECVIEWCFG, * PSRECVIEWCFG;
+
 typedef struct tagSRECRECORD {
     uint8_t     nDataLen;
     uint32_t    cAddr;
@@ -42,6 +52,19 @@ typedef struct tagSRECFILE {
 typedef const SRECFILE* PCSRECFILE;
 
 void RegisterHANSrecView(HINSTANCE hInst);
+
+/* 初始化配置
+ * pIniPath                 ini 文件路径
+ * pParam                   存放配置的结构体指针
+ */
+void ReadSrecViewIniFile(HANPCSTR pIniPath, void* pParam);
+
+/* 保存配置
+ * pIniPath                 ini 文件路径
+ * hSrecView                窗口句柄
+ */
+void WriteSrecViewIniFile(HANPCSTR pIniPath, HWND hSrecView);
+
 void BinDataToSrecFile(HANDLE hFile, SRECADDRSIZE sasAddrSize, uint32_t cStartAddr, uint8_t* pBinData, uint32_t nLen);
 
 void LinkSrecFile(HANPCSTR pFileDest, HANCHAR pFileSrc[LINK_FILE_CNT_MAX][PATH_STR_SIZE], uint32_t nLen);

@@ -3,6 +3,9 @@
 #include "..\..\GlobalVariables.h"
 #include "HAN_Srec.h"
 
+#define INI_SREC_VIEW_VALUE_SIZE        INI_MAIN_VALUE_STR_SIZE
+#define INI_SREC_VIEW_APP_NAME          TEXT("SvConfig")
+
 typedef enum {
     SREC_ADDR_BIT_LEN_16,
     SREC_ADDR_BIT_LEN_24,
@@ -51,7 +54,15 @@ typedef struct tagSRECVIEWWNDEXTRA {
     HFONT           hHexFont;
     HFONT           hSysFont;
     BOOL            bSrecOpen;
+    SRECVIEWCFG     pSvConfig;
 } SRECVIEWWNDEXTRA, * PSRECVIEWWNDEXTRA;
+
+typedef struct tagSRECVIEWREADWRITECFG {
+    HANPCSTR        pKey;
+    HANPCSTR        pDefValue;
+    void            (*CfgWindowToText)(PSRECVIEWWNDEXTRA bvInfo, HANPSTR pText);
+    void            (*CfgTextToWindow)(PSRECVIEWWNDEXTRA bvInfo, HANPCSTR pText);
+} SRECVIEWREADWRITECFG;
 
 static HAN_errno_t HANSrecFileTextToSrec(PSRECFILE pSrecFile);
 static HAN_errno_t HANAllocSrecBinBuf(PSRECFILE pSrecFile, DWORD nFileSize, HANDLE hHeap);
@@ -63,6 +74,7 @@ static LRESULT CALLBACK SrecViewWndProc(HWND hSrecView, UINT message, WPARAM wPa
 static SRECADDRBITLEN GetSrecAddrBitLen(uint8_t cRecordType);
 static void PrintSrecView(PSRECVIEWWNDEXTRA svInfo);
 static LRESULT CreateAction(HWND hWnd, LPARAM lParam);
+static void LoadSrecViewCfg(PSRECVIEWWNDEXTRA svInfo, PSRECVIEWCFG pSvConfig);
 static void CommandAction(HWND hWnd, PSRECVIEWWNDEXTRA svInfo, WPARAM wParam, LPARAM lParam);
 static void OpenFileAction(PSRECVIEWWNDEXTRA svInfo);
 static void SaveBinFileAction(PSRECVIEWWNDEXTRA svInfo);
@@ -72,6 +84,27 @@ static void LinkLinkFileAction(PSRECVIEWWNDEXTRA svInfo);
 static void PrintSrecMemMap(PSRECVIEWWNDEXTRA svInfo);
 static void AppendSrecMap(PSRECVIEWWNDEXTRA svInfo, PADDRMAP pAddrMap);
 static HAN_errno_t SaveFilledSrecFileAction(PSRECVIEWWNDEXTRA svInfo);
+
+static void CfgWindowToTextStartAddr(PSRECVIEWWNDEXTRA svInfo, HANPSTR pText);
+static void CfgWindowToTextEndAddr(PSRECVIEWWNDEXTRA svInfo, HANPSTR pText);
+
+static void CfgTextToWindowStartAddr(PSRECVIEWWNDEXTRA svInfo, HANPCSTR pText);
+static void CfgTextToWindowEndAddr(PSRECVIEWWNDEXTRA svInfo, HANPCSTR pText);
+
+static const SRECVIEWREADWRITECFG sg_pSrecViewCfgInfo[INI_SREC_VIEW_CFG_CNT] = {
+    [INI_SREC_VIEW_START_ADDR] = {
+        .pKey = TEXT("StartAddr"),
+        .pDefValue = DEFAULT_START_ADDR_TEXT,
+        .CfgWindowToText = CfgWindowToTextStartAddr,
+        .CfgTextToWindow = CfgTextToWindowStartAddr,
+    },
+    [INI_SREC_VIEW_END_ADDR] = {
+        .pKey = TEXT("EndAddr"),
+        .pDefValue = DEFAULT_END_ADDR_TEXT,
+        .CfgWindowToText = CfgWindowToTextEndAddr,
+        .CfgTextToWindow = CfgTextToWindowEndAddr,
+    },
+};
 
 void RegisterHANSrecView(HINSTANCE hInst)
 {
@@ -91,6 +124,37 @@ void RegisterHANSrecView(HINSTANCE hInst)
     };
     RegisterClassEx(&wcex);
 }
+
+void ReadSrecViewIniFile(HANPCSTR pIniPath, void* pParam)
+{
+    PSRECVIEWCFG pSvConfig = pParam;
+    INISRECVIEWCFGID iLoop;
+
+    for (iLoop = 0; iLoop < INI_SREC_VIEW_CFG_CNT; iLoop++)
+    {
+        HAN_strcpy(pSvConfig->pSysConfig[iLoop].pKey, sg_pSrecViewCfgInfo[iLoop].pKey);
+        HAN_strcpy(pSvConfig->pSysConfig[iLoop].pDefValue, sg_pSrecViewCfgInfo[iLoop].pDefValue);
+        GetPrivateProfileString(
+            INI_SREC_VIEW_APP_NAME, pSvConfig->pSysConfig[iLoop].pKey, pSvConfig->pSysConfig[iLoop].pDefValue,
+            pSvConfig->pSysConfig[iLoop].pValue, INI_SREC_VIEW_VALUE_SIZE, pIniPath);
+    }
+}
+
+void WriteSrecViewIniFile(HANPCSTR pIniPath, HWND hSrecView)
+{
+    PSRECVIEWWNDEXTRA hvInfo = (PSRECVIEWWNDEXTRA)GetWindowLongPtr(hSrecView, 0);
+    HANCHAR pBvCfg[INI_SREC_VIEW_CFG_CNT][INI_SREC_VIEW_VALUE_SIZE];
+    INISRECVIEWCFGID iLoop;
+    
+    for (iLoop = 0; iLoop < INI_SREC_VIEW_CFG_CNT; iLoop++)
+    {
+        sg_pSrecViewCfgInfo[iLoop].CfgWindowToText(hvInfo, pBvCfg[iLoop]);
+        WritePrivateProfileString(
+            INI_SREC_VIEW_APP_NAME, sg_pSrecViewCfgInfo[iLoop].pKey, pBvCfg[iLoop], pIniPath
+        );
+    }
+}
+
 void BinDataToSrecFile(HANDLE hFile, SRECADDRSIZE sasAddrSize, uint32_t cStartAddr, uint8_t* pBinData, uint32_t nLen)
 {
     uint8_t pBuf[32];
@@ -115,7 +179,7 @@ void BinDataToSrecFile(HANDLE hFile, SRECADDRSIZE sasAddrSize, uint32_t cStartAd
         }
         pBuf[pBuf[0]] = HANSrecRecordCheck(pBuf, pBuf[0]);
         nWriteLen += sprintf(pText + nWriteLen, "S%d", sasAddrSize - 1);
-        for (uint32_t i = 0; i < (pBuf[0] + 1); i++)
+        for (uint32_t i = 0; i < ((uint32_t)(pBuf[0]) + (uint32_t)1); i++)
         {
             nWriteLen += sprintf(pText + nWriteLen, "%02X", pBuf[i]);
         }
@@ -124,6 +188,7 @@ void BinDataToSrecFile(HANDLE hFile, SRECADDRSIZE sasAddrSize, uint32_t cStartAd
         nOffset += nRecordLen;
     }
 }
+
 void LinkSrecFile(HANPCSTR pFileDest, HANCHAR pFileSrc[LINK_FILE_CNT_MAX][PATH_STR_SIZE], uint32_t nLen)
 {
     HANDLE hDest;
@@ -399,7 +464,7 @@ static void PrintSrecView(PSRECVIEWWNDEXTRA svInfo)
         nOffSet += HAN_snprintf(&pText[nOffSet], nTextBufSize - nOffSet, TEXT("S%1X "), pSrecRecord->cDataType);
         nOffSet += HAN_snprintf(&pText[nOffSet], nTextBufSize - nOffSet, TEXT("%02X "), pSrecRecord->nDataLen);
         nOffSet += HAN_snprintf(&pText[nOffSet], nTextBufSize - nOffSet, pAddrFormat[cAddrBitLen], pSrecRecord->cAddr);
-        for (uint32_t j = 0; j < pSrecRecord->nDataLen - 3; j++)
+        for (uint32_t j = 0; j < ((uint32_t)(pSrecRecord->nDataLen) - (uint32_t)3); j++)
         {
             nOffSet += HAN_snprintf(&pText[nOffSet], nTextBufSize - nOffSet, TEXT("%02X"), pSrecRecord->pData[j]);
         }
@@ -416,6 +481,7 @@ static LRESULT CreateAction(HWND hWnd, LPARAM lParam)
     LRESULT lWndProcRet = 0;
     PSRECVIEWWNDEXTRA svInfo;
     HINSTANCE hInst = ((LPCREATESTRUCT)lParam)->hInstance;
+    PSRECVIEWCFG pSvConfig = ((LPCREATESTRUCT)lParam)->lpCreateParams;
     RECT rcClientSize;
 
     HANDLE hHeap = GetProcessHeap();
@@ -516,12 +582,29 @@ static LRESULT CreateAction(HWND hWnd, LPARAM lParam)
         SendMessage(svInfo->hLinkFileLink, WM_SETFONT, (WPARAM)(svInfo->hSysFont), (LPARAM)TRUE);
 
         svInfo->bSrecOpen = FALSE;
+
+        if (NULL != pSvConfig)
+        {
+            (void)memcpy(&(svInfo->pSvConfig), pSvConfig, sizeof(svInfo->pSvConfig));
+            LoadSrecViewCfg(svInfo, pSvConfig);
+        }
     }
 
     return lWndProcRet;
 }
+static void LoadSrecViewCfg(PSRECVIEWWNDEXTRA svInfo, PSRECVIEWCFG pSvConfig)
+{
+    INISRECVIEWCFGID iLoop;
+
+    for (iLoop = 0; iLoop < INI_SREC_VIEW_CFG_CNT; iLoop++)
+    {
+        sg_pSrecViewCfgInfo[iLoop].CfgTextToWindow(svInfo, pSvConfig->pSysConfig[iLoop].pValue);
+    }
+}
 static void CommandAction(HWND hWnd, PSRECVIEWWNDEXTRA svInfo, WPARAM wParam, LPARAM lParam)
 {
+    (void)lParam;
+
     switch (LOWORD(wParam)) {
         case WID_OPEN_SREC_FILE_BUTTON: {
             OpenFileAction(svInfo);
@@ -648,7 +731,7 @@ static void LinkLinkFileAction(PSRECVIEWWNDEXTRA svInfo)
     OPENFILENAME ofnOpenFile;
 
     if (nListStrCnt < nForMax) { nForMax = nListStrCnt; }
-    for (uint32_t i = 0; i < nForMax; i++)
+    for (int i = 0; i < nForMax; i++)
     {
         SendMessage(svInfo->hLinkFileList, LB_GETTEXT, (WPARAM)i, (LPARAM)(pFileName[i]));
     }
@@ -754,4 +837,40 @@ static HAN_errno_t SaveFilledSrecFileAction(PSRECVIEWWNDEXTRA svInfo)
     }
 
     return nRet;
+}
+
+static void CfgWindowToTextStartAddr(PSRECVIEWWNDEXTRA svInfo, HANPSTR pText)
+{
+    HANCHAR pTempText[INI_SREC_VIEW_VALUE_SIZE];
+    HANSIZE cAddr;
+
+    GetWindowText(svInfo->hStartAddrEdit, pTempText, INI_SREC_VIEW_VALUE_SIZE);
+    cAddr = HAN_strtoul(pTempText, NULL, 16);
+    HAN_snprintf(pText, INI_SREC_VIEW_VALUE_SIZE, ADDR_PRINT_FORMAT_SINGLE, cAddr);
+}
+static void CfgWindowToTextEndAddr(PSRECVIEWWNDEXTRA svInfo, HANPSTR pText)
+{
+    HANCHAR pTempText[INI_SREC_VIEW_VALUE_SIZE];
+    HANSIZE cAddr;
+
+    GetWindowText(svInfo->hEndAddrEdit, pTempText, INI_SREC_VIEW_VALUE_SIZE);
+    cAddr = HAN_strtoul(pTempText, NULL, 16);
+    HAN_snprintf(pText, INI_SREC_VIEW_VALUE_SIZE, ADDR_PRINT_FORMAT_SINGLE, cAddr);
+}
+
+static void CfgTextToWindowStartAddr(PSRECVIEWWNDEXTRA svInfo, HANPCSTR pText)
+{
+    HANSIZE cAddr = HAN_strtoul(pText, NULL, 16);
+    HANCHAR pTempText[ADDR_STR_SIZE];
+
+    HAN_snprintf(pTempText, ADDR_STR_SIZE, ADDR_PRINT_FORMAT_FULL, cAddr);
+    SetWindowText(svInfo->hStartAddrEdit, pTempText);
+}
+static void CfgTextToWindowEndAddr(PSRECVIEWWNDEXTRA svInfo, HANPCSTR pText)
+{
+    HANSIZE cAddr = HAN_strtoul(pText, NULL, 16);
+    HANCHAR pTempText[ADDR_STR_SIZE];
+
+    HAN_snprintf(pTempText, ADDR_STR_SIZE, ADDR_PRINT_FORMAT_FULL, cAddr);
+    SetWindowText(svInfo->hEndAddrEdit, pTempText);
 }

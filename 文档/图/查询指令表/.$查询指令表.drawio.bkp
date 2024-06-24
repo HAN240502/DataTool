@@ -1,0 +1,89 @@
+<mxfile host="Electron" modified="2024-05-27T15:17:30.288Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.2.5 Chrome/120.0.6099.109 Electron/28.1.0 Safari/537.36" etag="U54PkxTu5vzWkqLuMd3Q" version="24.2.5" type="device">
+  <diagram name="第 1 页" id="2FEZDoC3l5xh-Ew9cWz8">
+    <mxGraphModel dx="627" dy="469" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="7POnDu-EcB44KsYf-m66-11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="7POnDu-EcB44KsYf-m66-1" target="7POnDu-EcB44KsYf-m66-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-1" value="进入cmd命令行模式" style="rounded=0;whiteSpace=wrap;html=1;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="200" y="280" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="7POnDu-EcB44KsYf-m66-6" target="7POnDu-EcB44KsYf-m66-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-6" value="转换成指令&lt;div&gt;字符串数组&lt;/div&gt;" style="whiteSpace=wrap;html=1;fontSize=16;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="220" y="360" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="7POnDu-EcB44KsYf-m66-8" target="7POnDu-EcB44KsYf-m66-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-18" value="N" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="7POnDu-EcB44KsYf-m66-13">
+          <mxGeometry x="-0.16" relative="1" as="geometry">
+            <mxPoint y="-2" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-8" value="指令字符串数组&lt;div&gt;是否遍历完&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fontSize=16;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="180" y="440" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-25" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="7POnDu-EcB44KsYf-m66-12" target="7POnDu-EcB44KsYf-m66-24">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-12" value="指令表&lt;span style=&quot;background-color: initial;&quot;&gt;是否遍历完&lt;/span&gt;" style="rhombus;whiteSpace=wrap;html=1;fontSize=16;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="180" y="560" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-30" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="7POnDu-EcB44KsYf-m66-22" target="7POnDu-EcB44KsYf-m66-29">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-31" value="Y" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="7POnDu-EcB44KsYf-m66-30">
+          <mxGeometry x="-0.3643" relative="1" as="geometry">
+            <mxPoint y="2" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="7POnDu-EcB44KsYf-m66-22" target="7POnDu-EcB44KsYf-m66-12">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="800" />
+              <mxPoint x="420" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-33" value="N" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="7POnDu-EcB44KsYf-m66-32">
+          <mxGeometry x="-0.899" y="-1" relative="1" as="geometry">
+            <mxPoint x="6" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-22" value="指令是否匹配" style="rhombus;whiteSpace=wrap;html=1;fontSize=16;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="180" y="760" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-26" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="7POnDu-EcB44KsYf-m66-24" target="7POnDu-EcB44KsYf-m66-22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-24" value="查询指令表的下一条指令" style="whiteSpace=wrap;html=1;fontSize=16;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="200" y="680" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-38" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="7POnDu-EcB44KsYf-m66-29" target="7POnDu-EcB44KsYf-m66-37">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-29" value="读取指令所需的参数的个数N" style="whiteSpace=wrap;html=1;fontSize=16;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="220" y="880" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-34" value="从字符串数组再读取N个指令" style="whiteSpace=wrap;html=1;fontSize=16;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="220" y="1080" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-39" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="7POnDu-EcB44KsYf-m66-37" target="7POnDu-EcB44KsYf-m66-34">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-40" value="Y" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="7POnDu-EcB44KsYf-m66-39">
+          <mxGeometry x="-0.05" y="1" relative="1" as="geometry">
+            <mxPoint x="-1" y="-4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7POnDu-EcB44KsYf-m66-37" value="字符串数组中的剩余指令数 &amp;gt;= N" style="rhombus;whiteSpace=wrap;html=1;fontSize=16;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="120" y="960" width="320" height="80" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

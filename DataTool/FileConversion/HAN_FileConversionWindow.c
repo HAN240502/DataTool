@@ -10,6 +10,9 @@
 #include "HAN_FileConversionWindow.h"
 #include "HAN_FileConversion.h"
 
+#define INI_FILE_CONVERSION_VALUE_SIZE  INI_MAIN_VALUE_STR_SIZE
+#define INI_FILE_CONVERSION_APP_NAME    TEXT("fcConfig")
+
 #define MSG_FILE_PRO_DIV            ((DWORD)100)
 
 #define CONVERT_TRY_MSG_CNT         (100)
@@ -55,13 +58,18 @@ typedef struct tagFILECONVERSIONEXTRA {
     FILECONVERSIONWINPARAM  fcWinParam;
 } FILECONVERSIONEXTRA, * PFILECONVERSIONEXTRA;
 
-static void s_GetFileConversionCfg(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pIniPath);
+typedef struct tagFILECONVERSIONREADWRITECFG {
+    HANPCSTR            pKey;
+    HANPCSTR            pDefValue;
+    void                (*CfgWindowToText)(PFILECONVERSIONEXTRA fcInfo, HANPSTR pText);
+    void                (*CfgTextToWindow)(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pText);
+} FILECONVERSIONREADWRITECFG;
 
 static LRESULT CALLBACK FileConversionWndProc(HWND hFileConversion, UINT message, WPARAM wParam, LPARAM lParam);
 static LRESULT CreateAction(HWND hWnd, LPARAM lParam);
 static void LoadDllOkAction(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pDllPath);
 static FILECONVERSIONERRNO LoadDllFile(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pDllPath);
-static void LoadFileConversionCfg(PFILECONVERSIONEXTRA fcInfo);
+static void LoadFileConversionCfg(PFILECONVERSIONEXTRA fcInfo, PFILECONVERSIONCFG pFcConfig);
 static void CommandAction(HWND hWnd, PFILECONVERSIONEXTRA fcInfo, WPARAM wParam, LPARAM lParam);
 static void ImportDllAction(PFILECONVERSIONEXTRA fcInfo, BOOL bErrMsg);
 static void ChoosePathAction(PFILECONVERSIONEXTRA fcInfo);
@@ -75,6 +83,43 @@ static BOOL ConvertAlloc(PFILECONVERSIONEXTRA fcInfo, size_t nBufSize);
 static void WindowsWriteFile(void* pData, uint32_t nLen, void* pFile);
 static void WindowPrintReport(HANPCSTR pReport, void* pUserParam);
 static void WindowUpdateProgress(uint32_t i, uint32_t iMax, void* pUserParam);
+
+static void CfgWindowToTextDllPath(PFILECONVERSIONEXTRA fcInfo, HANPSTR pText);
+static void CfgWindowToTextConvertPath(PFILECONVERSIONEXTRA fcInfo, HANPSTR pText);
+static void CfgWindowToTextConvertFolder(PFILECONVERSIONEXTRA fcInfo, HANPSTR pText);
+static void CfgWindowToTextFilter(PFILECONVERSIONEXTRA fcInfo, HANPSTR pText);
+
+static void CfgTextToWindowDllPath(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pText);
+static void CfgTextToWindowConvertPath(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pText);
+static void CfgTextToWindowConvertFolder(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pText);
+static void CfgTextToWindowFilter(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pText);
+
+static const FILECONVERSIONREADWRITECFG sg_pFileConversionCfgInfo[INI_FILE_CONVERSION_CFG_CNT] = {
+    [INI_FILE_CONVERSION_DLL_PATH] = {
+        .pKey = TEXT("DllPath"),
+        .pDefValue = TEXT(""),
+        .CfgWindowToText = CfgWindowToTextDllPath,
+        .CfgTextToWindow = CfgTextToWindowDllPath,
+    },
+    [INI_FILE_CONVERSION_CONVERT_PATH] = {
+        .pKey = TEXT("ConvertPath"),
+        .pDefValue = TEXT(""),
+        .CfgWindowToText = CfgWindowToTextConvertPath,
+        .CfgTextToWindow = CfgTextToWindowConvertPath,
+    },
+    [INI_FILE_CONVERSION_CONVERT_FOLDER] = {
+        .pKey = TEXT("ConvertFolder"),
+        .pDefValue = TEXT("TRUE"),
+        .CfgWindowToText = CfgWindowToTextConvertFolder,
+        .CfgTextToWindow = CfgTextToWindowConvertFolder,
+    },
+    [INI_FILE_CONVERSION_FILTER] = {
+        .pKey = TEXT("Filter"),
+        .pDefValue = TEXT("0"),
+        .CfgWindowToText = CfgWindowToTextFilter,
+        .CfgTextToWindow = CfgTextToWindowFilter,
+    },
+};
 
 void RegisterHANFileConversion(HINSTANCE hInst)
 {
@@ -95,57 +140,46 @@ void RegisterHANFileConversion(HINSTANCE hInst)
     RegisterClassEx(&wcex);
 }
 
-void WriteFileConversionCfg(HWND hFileConversion, HANPCSTR pIniPath)
-{
-    SendMessage(hFileConversion, WM_FILECONVERSIONGETCFG, 0, (LPARAM)pIniPath);
-}
-
-void ReadConvertFileIniFile(PFILECONVERSIONCFG pFcConfig, HANPCSTR pIniPath)
+void ReadFileConversionIniFile(HANPCSTR pIniPath, void* pParam)
 {
     HANCHAR pText[INI_FILE_CONVERSION_VALUE_SIZE];
-    for (uint32_t i = 0; i < INI_FILE_CONVERSION_CFG_CNT; i++)
+    PFILECONVERSIONCFG pFcConfig = pParam;
+    HANSIZE iLoop;
+
+    for (iLoop = 0; iLoop < INI_FILE_CONVERSION_CFG_CNT; iLoop++)
     {
+        HAN_strcpy(pFcConfig->pSysConfig[iLoop].pKey, sg_pFileConversionCfgInfo[iLoop].pKey);
+        HAN_strcpy(pFcConfig->pSysConfig[iLoop].pDefValue, sg_pFileConversionCfgInfo[iLoop].pDefValue);
         GetPrivateProfileString(
-            INI_FILE_CONVERSION_APP_NAME, pFcConfig->pSysConfig[i].pKey, pFcConfig->pSysConfig[i].pDefValue,
-            pFcConfig->pSysConfig[i].pValue, INI_FILE_CONVERSION_VALUE_SIZE, pIniPath);
+            INI_FILE_CONVERSION_APP_NAME, pFcConfig->pSysConfig[iLoop].pKey, pFcConfig->pSysConfig[iLoop].pDefValue,
+            pFcConfig->pSysConfig[iLoop].pValue, INI_FILE_CONVERSION_VALUE_SIZE, pIniPath);
     }
+    
     GetPrivateProfileString(INI_FILE_CONVERSION_APP_NAME, USER_SETTING_KEY_NAME TEXT("Cnt"), TEXT("0"), pText, INI_FILE_CONVERSION_VALUE_SIZE, pIniPath);
     uint32_t nUserConfigCnt = HAN_strtoul(pText, NULL, 10);
     if (FILE_CONVERSION_USER_SETTING_CFG_CNT_MAX < nUserConfigCnt) { nUserConfigCnt = FILE_CONVERSION_USER_SETTING_CFG_CNT_MAX; }
-    for (uint32_t i = 0; i < nUserConfigCnt; i++)
+    for (iLoop = 0; iLoop < nUserConfigCnt; iLoop++)
     {
-        HAN_snprintf(pText, ArrLen(pText), USER_SETTING_KEY_NAME TEXT("%u"), i + 1);
+        HAN_snprintf(pText, ArrLen(pText), USER_SETTING_KEY_NAME TEXT("%u"), iLoop + 1);
         GetPrivateProfileString(
             INI_FILE_CONVERSION_APP_NAME, pText, TEXT(""),
-            pFcConfig->usUserConfig.pCfg[i], INI_FILE_CONVERSION_VALUE_SIZE, pIniPath);
+            pFcConfig->usUserConfig.pCfg[iLoop], INI_FILE_CONVERSION_VALUE_SIZE, pIniPath);
     }
 }
 
-void InitFileConversionParam(PCFILECONVERSIONCFG pFcConfig, PFILECONVERSIONWINPARAM pWinParam)
+void WriteFileConversionIniFile(HANPCSTR pIniPath, HWND hFileConversion)
 {
-    
-}
-
-static void s_GetFileConversionCfg(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pIniPath)
-{
-    HANDATAINI pFcSysConfig[INI_FILE_CONVERSION_CFG_CNT];
+    PFILECONVERSIONEXTRA fcInfo = (PFILECONVERSIONEXTRA)GetWindowLongPtr(hFileConversion, 0);
+    HANCHAR pFcCfg[INI_FILE_CONVERSION_CFG_CNT][INI_FILE_CONVERSION_VALUE_SIZE];
     HANCHAR pText[INI_FILE_CONVERSION_VALUE_SIZE];
     PUSERSETTING pUserSetting = &(fcInfo->pFcConfig.usUserConfig);
-    int bConvertDir = ButtonGetCheck(fcInfo->hConvertDir);
-    int nFilterId  = ComboBoxGetCursel(fcInfo->hFilter);
-
-    if (CB_ERR == nFilterId) { nFilterId = 0; }
-
-    GetWindowText(fcInfo->hDllName, pFcSysConfig[INI_FILE_CONVERSION_DLL_PATH].pValue, INI_FILE_CONVERSION_VALUE_SIZE);
-    GetWindowText(fcInfo->hPathInput, pFcSysConfig[INI_FILE_CONVERSION_CONVERT_PATH].pValue, INI_FILE_CONVERSION_VALUE_SIZE);
-    if (BST_CHECKED == bConvertDir) { HAN_snprintf(pFcSysConfig[INI_FILE_CONVERSION_CONVERT_FOLDER].pValue, INI_FILE_CONVERSION_VALUE_SIZE, TEXT("TRUE")); }
-    else { HAN_snprintf(pFcSysConfig[INI_FILE_CONVERSION_CONVERT_FOLDER].pValue, INI_FILE_CONVERSION_VALUE_SIZE, TEXT("FALSE")); }
-    HAN_snprintf(pFcSysConfig[INI_FILE_CONVERSION_FILTER].pValue, INI_FILE_CONVERSION_VALUE_SIZE, TEXT("%d"), nFilterId);
-
-    for (uint32_t i = 0; i < INI_FILE_CONVERSION_CFG_CNT; i++)
+    INIFILECONVERSIONCFGID iLoop;
+    
+    for (iLoop = 0; iLoop < INI_FILE_CONVERSION_CFG_CNT; iLoop++)
     {
+        sg_pFileConversionCfgInfo[iLoop].CfgWindowToText(fcInfo, pFcCfg[iLoop]);
         WritePrivateProfileString(
-            INI_FILE_CONVERSION_APP_NAME, g_cfgHANData.cfgFileConversion.pSysConfig[i].pKey, pFcSysConfig[i].pValue, pIniPath
+            INI_FILE_CONVERSION_APP_NAME, sg_pFileConversionCfgInfo[iLoop].pKey, pFcCfg[iLoop], pIniPath
         );
     }
 
@@ -166,6 +200,12 @@ static void s_GetFileConversionCfg(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pIniPat
     }
 }
 
+void InitFileConversionParam(PCFILECONVERSIONCFG pFcConfig, PFILECONVERSIONWINPARAM pWinParam)
+{
+    (void)pFcConfig;
+    (void)pWinParam;
+}
+
 static LRESULT CALLBACK FileConversionWndProc(HWND hFileConversion, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LRESULT lWndProcRet = 0;
@@ -184,11 +224,6 @@ static LRESULT CALLBACK FileConversionWndProc(HWND hFileConversion, UINT message
         }
         case WM_CTLCOLORSTATIC: {
             lWndProcRet = (INT_PTR)GetStockObject(WHITE_BRUSH);
-            break;
-        }
-        
-        case WM_FILECONVERSIONGETCFG: {
-            s_GetFileConversionCfg(fcInfo, (HANPCSTR)lParam);
             break;
         }
 
@@ -295,7 +330,7 @@ static LRESULT CreateAction(HWND hWnd, LPARAM lParam)
         if (NULL != pFcConfig)
         {
             (void)memcpy(&(fcInfo->pFcConfig), pFcConfig, sizeof(fcInfo->pFcConfig));
-            LoadFileConversionCfg(fcInfo);
+            LoadFileConversionCfg(fcInfo, pFcConfig);
         }
     }
 
@@ -349,27 +384,20 @@ static FILECONVERSIONERRNO LoadDllFile(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pDl
     }
     return eRet;
 }
-static void LoadFileConversionCfg(PFILECONVERSIONEXTRA fcInfo)
+static void LoadFileConversionCfg(PFILECONVERSIONEXTRA fcInfo, PFILECONVERSIONCFG pFcConfig)
 {
-    PHANDATAINI pFcConfig = fcInfo->pFcConfig.pSysConfig;
-    /* ╪сть DLL */
-    if (TRUE == PathFileExists(pFcConfig[INI_FILE_CONVERSION_DLL_PATH].pValue))
+    INIFILECONVERSIONCFGID iLoop;
+
+    for (iLoop = 0; iLoop < INI_FILE_CONVERSION_CFG_CNT; iLoop++)
     {
-        if (FILECONVERSION_ERRNO_OK == LoadDllFile(fcInfo, pFcConfig[INI_FILE_CONVERSION_DLL_PATH].pValue))
-        {
-            LoadDllOkAction(fcInfo, pFcConfig[INI_FILE_CONVERSION_DLL_PATH].pValue);
-        }
+        sg_pFileConversionCfgInfo[iLoop].CfgTextToWindow(fcInfo, pFcConfig->pSysConfig[iLoop].pValue);
     }
-    SetWindowText(fcInfo->hPathInput, pFcConfig[INI_FILE_CONVERSION_CONVERT_PATH].pValue);
-    if (0 == HAN_strcmp(pFcConfig[INI_FILE_CONVERSION_CONVERT_FOLDER].pValue, TEXT("FALSE"))) { ButtonSetUnchecked(fcInfo->hConvertDir); }
-    else { ButtonSetChecked(fcInfo->hConvertDir); }
-    int iFilterId = HAN_strtoul(pFcConfig[INI_FILE_CONVERSION_FILTER].pValue, NULL, 10);
-    int nFilterCnt = SendMessage(fcInfo->hFilter, CB_GETCOUNT, 0, 0);
-    if ((CB_ERR == nFilterCnt) || (nFilterCnt <= iFilterId)) { iFilterId = 0; }
-    ComboBoxSetCursel(fcInfo->hFilter, iFilterId);
 }
 static void CommandAction(HWND hWnd, PFILECONVERSIONEXTRA fcInfo, WPARAM wParam, LPARAM lParam)
 {
+    (void)hWnd;
+    (void)lParam;
+
     switch (LOWORD(wParam)) {
         case WID_FILE_CONVERSION_IMPORT_DLL: {
             ImportDllAction(fcInfo, TRUE);
@@ -394,6 +422,8 @@ static void CommandAction(HWND hWnd, PFILECONVERSIONEXTRA fcInfo, WPARAM wParam,
 }
 static void ImportDllAction(PFILECONVERSIONEXTRA fcInfo, BOOL bErrMsg)
 {
+    (void)bErrMsg;
+
     HANCHAR pInputName[PATH_STR_SIZE] = { 0 };
     OPENFILENAME ofnOpenFile;
     ZeroMemory(&ofnOpenFile, sizeof(ofnOpenFile));
@@ -632,6 +662,58 @@ static void WindowPrintReport(HANPCSTR pReport, void* pUserParam)
 }
 static void WindowUpdateProgress(uint32_t i, uint32_t iMax, void* pUserParam)
 {
+    (void)iMax;
+
     PFILECONVERSIONEXTRA fcInfo = (PFILECONVERSIONEXTRA)pUserParam;
     SendMessage(fcInfo->hProgress, PBM_SETPOS, i, 0);
+}
+
+static void CfgWindowToTextDllPath(PFILECONVERSIONEXTRA fcInfo, HANPSTR pText)
+{
+    GetWindowText(fcInfo->hDllName, pText, INI_FILE_CONVERSION_VALUE_SIZE);
+}
+static void CfgWindowToTextConvertPath(PFILECONVERSIONEXTRA fcInfo, HANPSTR pText)
+{
+    GetWindowText(fcInfo->hPathInput, pText, INI_FILE_CONVERSION_VALUE_SIZE);
+}
+static void CfgWindowToTextConvertFolder(PFILECONVERSIONEXTRA fcInfo, HANPSTR pText)
+{
+    HANINT bCheck = ButtonGetCheck(fcInfo->hConvertDir);
+
+    if (BST_CHECKED == bCheck) { HAN_snprintf(pText, INI_FILE_CONVERSION_VALUE_SIZE, TEXT("TRUE")); }
+    else { HAN_snprintf(pText, INI_FILE_CONVERSION_VALUE_SIZE, TEXT("FALSE")); }
+}
+static void CfgWindowToTextFilter(PFILECONVERSIONEXTRA fcInfo, HANPSTR pText)
+{
+    HANINT nId = ComboBoxGetCursel(fcInfo->hFilter);
+
+    if (CB_ERR == nId) { nId = DEFAULT_CRC_ID; }
+    HAN_snprintf(pText, INI_FILE_CONVERSION_VALUE_SIZE, TEXT("%d"), nId);
+}
+
+static void CfgTextToWindowDllPath(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pText)
+{
+    if (TRUE == PathFileExists(pText))
+    {
+        if (FILECONVERSION_ERRNO_OK == LoadDllFile(fcInfo, pText))
+        {
+            LoadDllOkAction(fcInfo, pText);
+        }
+    }
+}
+static void CfgTextToWindowConvertPath(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pText)
+{
+    SetWindowText(fcInfo->hPathInput, pText);
+}
+static void CfgTextToWindowConvertFolder(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pText)
+{
+    if (0 == HAN_strcmp(pText, TEXT("TRUE"))) { ButtonSetChecked(fcInfo->hConvertDir); }
+    else { ButtonSetUnchecked(fcInfo->hConvertDir); }
+}
+static void CfgTextToWindowFilter(PFILECONVERSIONEXTRA fcInfo, HANPCSTR pText)
+{
+    HANINT iFilterId = HAN_strtoul(pText, NULL, 10);
+    HANINT nFilterCnt = SendMessage(fcInfo->hFilter, CB_GETCOUNT, 0, 0);
+    if ((CB_ERR == nFilterCnt) || (nFilterCnt <= iFilterId)) { iFilterId = 0; }
+    ComboBoxSetCursel(fcInfo->hFilter, iFilterId);
 }

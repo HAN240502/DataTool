@@ -58,6 +58,10 @@ enum HAN_lib_errno_enum {
 #define StructMemberOffset(structure, member)   ((size_t)(&(((structure*)0)->member)))
 #define StructMemberSize(structure, member)     ((size_t)sizeof(((structure*)0)->member))
 
+typedef int             HANINT;
+typedef float           HANFLOAT;
+typedef double          HANDOUBLE;
+
 #ifdef __cplusplus
 }
 #endif

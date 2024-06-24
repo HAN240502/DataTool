@@ -1,0 +1,27 @@
+{
+    "files.associations": {
+        "han_comtool.h": "c",
+        "han_fileconversiontypedef.h": "c",
+        "pathcch.h": "c",
+        "han_windows.h": "c",
+        "globalvariables.h": "c",
+        "han_fileconversionwindow.h": "c",
+        "*.rh": "c",
+        "datatoolinfo.h": "c",
+        "han_datacmd.h": "c",
+        "han_bin.h": "c",
+        "han_asc.h": "c",
+        "han_hex.h": "c",
+        "han_srec.h": "c",
+        "datatooltypedef.h": "c",
+        "han_crc.h": "c",
+        "float.h": "c",
+        "han_wingdi.h": "c",
+        "han_comtooldef.h": "c",
+        "han_comtoolconsle.h": "c",
+        "han_comtoolglobalvariables.h": "c",
+        "han_comtoolsavetofile.h": "c",
+        "han_comtoolprinttimedef.h": "c",
+        "han_comtoolsavetofiledef.h": "c"
+    }
+}

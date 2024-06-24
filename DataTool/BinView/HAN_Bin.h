@@ -33,22 +33,40 @@ typedef enum {
     CRCID_CRC16_DNP,
     CRCID_CRC32_STD,
     CRCID_CRC32_MPEG2,
+    CRCID_CNT_MAX,
 } ENUMCRCID;
 
 #define HAN_BIN_VIEW_CLASS      TEXT("HAN_BinView")
 
-#define DEFAULT_DATA_POS_VALUE  0x10FFC7
+#define DEFAULT_DATA_POS_VALUE  0x0
 #define DEFAULT_CRC_START_VALUE 0x0
-#define DEFAULT_CRC_END_VALUE   0x10FFFB
-#define DEFAULT_CRC_POS_VALUE   0x10FFFE
+#define DEFAULT_CRC_END_VALUE   0xFFD
+#define DEFAULT_CRC_POS_VALUE   0xFFE
 
-#define DEFAULT_DATA_POS_TEXT   TEXT("10FFC7")
+#define DEFAULT_DATA_POS_TEXT   TEXT("0")
 #define DEFAULT_CRC_START_TEXT  TEXT("0")
-#define DEFAULT_CRC_END_TEXT    TEXT("10FFFB")
-#define DEFAULT_CRC_POS_TEXT    TEXT("10FFFE")
+#define DEFAULT_CRC_END_TEXT    TEXT("FFD")
+#define DEFAULT_CRC_POS_TEXT    TEXT("FFE")
 
 #define DEFAULT_CRC_ID          CRCID_CRC16_UDS
 #define CRC_NAME_MAX_CNT        100
+
+typedef enum {
+    INI_BIN_VIEW_SAVE_START_ZERO,
+    INI_BIN_VIEW_SAVE_START_ADDR,
+    INI_BIN_VIEW_SAVE_LEN,
+    INI_BIN_VIEW_DATA_POS,
+    INI_BIN_VIEW_DATA_LEN,
+    INI_BIN_VIEW_PARITY_NAME,
+    INI_BIN_VIEW_PARITY_START,
+    INI_BIN_VIEW_PARITY_END,
+    INI_BIN_VIEW_PARITY_POS,
+    INI_BIN_VIEW_CFG_CNT,
+} INIBINVIEWCFGID;
+
+typedef struct tagBINVIEWCFG {
+    HANDATAINI          pSysConfig[INI_BIN_VIEW_CFG_CNT];
+} BINVIEWCFG, * PBINVIEWCFG;
 
 typedef struct tagBINFILE {
     uint8_t*        pBinData;
@@ -56,6 +74,18 @@ typedef struct tagBINFILE {
 } BINFILE, * PBINFILE;
 
 void RegisterHANBinView(HINSTANCE hInst);
+
+/* 初始化配置
+ * pIniPath                 ini 文件路径
+ * pParam                   存放配置的结构体指针
+ */
+void ReadBinViewIniFile(HANPCSTR pIniPath, void* pParam);
+
+/* 保存配置
+ * pIniPath                 ini 文件路径
+ * hBinView                 窗口句柄
+ */
+void WriteBinViewIniFile(HANPCSTR pIniPath, HWND hBinView);
 
 HAN_errno_t HANOpenBinFile(PBINFILE pBinFile, HANPCSTR pFileName, HANDLE hHeap);
 void HANBinFileSetData(uint8_t* pDest, uint32_t nDestLen, HANPCSTR pSrcName, uint32_t nOffset, uint32_t nSrcLen);

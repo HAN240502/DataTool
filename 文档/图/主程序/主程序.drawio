@@ -1,0 +1,67 @@
+<mxfile host="Electron" modified="2024-05-02T05:36:47.962Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.2.5 Chrome/120.0.6099.109 Electron/28.1.0 Safari/537.36" etag="LWnzvbKzEWL0nHT-yxAJ" version="24.2.5" type="device">
+  <diagram name="第 1 页" id="6gIKcwAY9WZdEUUmm262">
+    <mxGraphModel dx="1098" dy="820" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="UtgOYbqUmiQt_hMbVHlg-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="UtgOYbqUmiQt_hMbVHlg-1" target="UtgOYbqUmiQt_hMbVHlg-2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UtgOYbqUmiQt_hMbVHlg-1" value="WinMain" style="rounded=0;whiteSpace=wrap;html=1;fontSize=16;" parent="1" vertex="1">
+          <mxGeometry x="360" y="200" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="UtgOYbqUmiQt_hMbVHlg-6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="UtgOYbqUmiQt_hMbVHlg-2" target="UtgOYbqUmiQt_hMbVHlg-4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UtgOYbqUmiQt_hMbVHlg-2" value="读取ini&lt;div&gt;配置文件&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontSize=16;" parent="1" vertex="1">
+          <mxGeometry x="360" y="280" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="UtgOYbqUmiQt_hMbVHlg-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="UtgOYbqUmiQt_hMbVHlg-4" target="UtgOYbqUmiQt_hMbVHlg-8" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UtgOYbqUmiQt_hMbVHlg-18" value="Y" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="UtgOYbqUmiQt_hMbVHlg-9" vertex="1" connectable="0">
+          <mxGeometry x="-0.4553" y="2" relative="1" as="geometry">
+            <mxPoint x="-5" y="2" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="UtgOYbqUmiQt_hMbVHlg-12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="UtgOYbqUmiQt_hMbVHlg-4" target="UtgOYbqUmiQt_hMbVHlg-11" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UtgOYbqUmiQt_hMbVHlg-17" value="N" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="UtgOYbqUmiQt_hMbVHlg-12" vertex="1" connectable="0">
+          <mxGeometry x="0.2172" relative="1" as="geometry">
+            <mxPoint y="-9" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="UtgOYbqUmiQt_hMbVHlg-4" value="命令行参数是否有内容" style="rhombus;whiteSpace=wrap;html=1;fontSize=16;" parent="1" vertex="1">
+          <mxGeometry x="300" y="360" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="UtgOYbqUmiQt_hMbVHlg-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="UtgOYbqUmiQt_hMbVHlg-8" target="UtgOYbqUmiQt_hMbVHlg-14" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="560" y="610" />
+              <mxPoint x="400" y="610" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="UtgOYbqUmiQt_hMbVHlg-8" value="进入cmd命令行模式" style="rounded=0;whiteSpace=wrap;html=1;fontSize=16;" parent="1" vertex="1">
+          <mxGeometry x="500" y="460" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="z_3M-j22Fwvgu1fQ5Qwy-2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="UtgOYbqUmiQt_hMbVHlg-11" target="z_3M-j22Fwvgu1fQ5Qwy-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="UtgOYbqUmiQt_hMbVHlg-11" value="进入图形界面模式" style="rounded=0;whiteSpace=wrap;html=1;fontSize=16;" parent="1" vertex="1">
+          <mxGeometry x="350" y="460" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="UtgOYbqUmiQt_hMbVHlg-14" value="结束" style="rounded=0;whiteSpace=wrap;html=1;fontSize=16;" parent="1" vertex="1">
+          <mxGeometry x="360" y="640" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="z_3M-j22Fwvgu1fQ5Qwy-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="z_3M-j22Fwvgu1fQ5Qwy-1" target="UtgOYbqUmiQt_hMbVHlg-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="z_3M-j22Fwvgu1fQ5Qwy-1" value="保存ini&lt;div&gt;配置文件&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="360" y="540" width="80" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,57 @@
+<mxfile host="Electron" modified="2024-05-19T14:21:44.042Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.2.5 Chrome/120.0.6099.109 Electron/28.1.0 Safari/537.36" etag="YVWV7hMrK0mr0ZqW61Hn" version="24.2.5" type="device">
+  <diagram name="第 1 页" id="Ir-aQ5ke0RXkTSyLsT_S">
+    <mxGraphModel dx="915" dy="683" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="1bMwBTg0rvPcA53LBBSG-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Helvetica;" edge="1" parent="1" source="1bMwBTg0rvPcA53LBBSG-1" target="1bMwBTg0rvPcA53LBBSG-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="1bMwBTg0rvPcA53LBBSG-1" value="启动" style="rounded=0;whiteSpace=wrap;html=1;fontSize=16;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="280" y="160" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="1bMwBTg0rvPcA53LBBSG-9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Helvetica;" edge="1" parent="1" source="1bMwBTg0rvPcA53LBBSG-4" target="1bMwBTg0rvPcA53LBBSG-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="1bMwBTg0rvPcA53LBBSG-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="1bMwBTg0rvPcA53LBBSG-4" target="1bMwBTg0rvPcA53LBBSG-18">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="160" y="280" />
+              <mxPoint x="160" y="580" />
+              <mxPoint x="320" y="580" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1bMwBTg0rvPcA53LBBSG-4" value="工具表是否&lt;div style=&quot;font-size: 16px;&quot;&gt;遍历完&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fontSize=16;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="200" y="240" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="1bMwBTg0rvPcA53LBBSG-11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Helvetica;" edge="1" parent="1" source="1bMwBTg0rvPcA53LBBSG-8" target="1bMwBTg0rvPcA53LBBSG-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="1bMwBTg0rvPcA53LBBSG-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="1bMwBTg0rvPcA53LBBSG-8">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="480" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1bMwBTg0rvPcA53LBBSG-8" value="读取ini配置文件&lt;div&gt;是否为NULL&lt;/div&gt;" style="rhombus;whiteSpace=wrap;html=1;fontSize=16;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="200" y="360" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="1bMwBTg0rvPcA53LBBSG-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="1bMwBTg0rvPcA53LBBSG-10" target="1bMwBTg0rvPcA53LBBSG-4">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="220" y="620" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="480" y="510" />
+              <mxPoint x="480" y="280" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1bMwBTg0rvPcA53LBBSG-10" value="执行&lt;div&gt;读取ini配置文件&lt;/div&gt;&lt;div&gt;传递ini配置数据地址&lt;/div&gt;" style="whiteSpace=wrap;html=1;fontSize=16;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="240" y="480" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="1bMwBTg0rvPcA53LBBSG-18" value="进入&lt;div&gt;图形界面模式 / cmd命令行模式&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontSize=16;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="200" y="620" width="240" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

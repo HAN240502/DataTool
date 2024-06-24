@@ -1,100 +1,38 @@
 #include <stdio.h>
 #include <Windows.h>
 #include <CommCtrl.h>
+#include <shlwapi.h>
 
-#include "HAN_Lib\HAN_windows.h"
 #include "GlobalVariables.h"
+#include "HAN_Lib\HAN_windows.h"
+#include "DataTool\DataToolInfo.h"
 #include "DataTool\DataCmd\HAN_DataCmd.h"
-#include "DataTool\FileConversion\HAN_FileConversionWindow.h"
-#include "DataTool\HexView\HAN_Hex.h"
-#include "DataTool\BinView\HAN_Bin.h"
-#include "DataTool\SrecView\HAN_Srec.h"
-#include "DataTool\AscView\HAN_Asc.h"
-#include "DataTool\ComTool\HAN_ComTool.h"
 
 #define TAB_TITLE_SIZE_W        50
 #define TAB_TITLE_SIZE_H        28
 
+#define CFG_INI_FILE_NAME       TEXT("HANDataCfg.ini")
+
+#define INI_MAIN_APP_NAME       TEXT("mainConfig")
+
 typedef enum {
     WID_WINDOW_TAB,
-    WID_WINDOW_FILE_CONVERSION,
-    WID_WINDOW_HEX_VIEW,
-    WID_WINDOW_BIN_VIEW,
-    WID_WINDOW_SREC_VIEW,
-    WID_WINDOW_ASC_VIEW,
-    WID_WINDOW_COM_TOOL,
-} ENUMWID;
-typedef enum {
-    TAB_ID_FILE_CONVERSION,
-    TAB_ID_HEX_VIEW,
-    TAB_ID_BIN_VIEW,
-    TAB_ID_SREC_VIEW,
-    TAB_ID_ASC_VIEW,
-    TAB_ID_COM_TOOL,
-    TAB_WIN_CNT,
-} ENUMTABID;
-
-typedef struct tagTABINFO {
-    HANCHAR     pTitle[256];
-    HANPCSTR    pClass;
-    HWND        hItem;
-    HMENU       nWinId;
-    void        (*RegisterHANTabWindow)(HINSTANCE hInst);
-    void*       pIni;
-} TABINFO;
+    WID_DATA_TOOL_BASE,
+} MAINWID;
 
 static LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+static void GetIniFileFullPath(HANPSTR pIniFullPath, HANSIZE nLen);
 static void ReadCfgIniFile(void);
 static void WriteCfgIniFile(void);
 
+static DATATOOLID   sg_nLastChosenToolId = 0;
 static HWND         g_hTab = NULL;
-static TABINFO      g_tiTabInfo[TAB_WIN_CNT] = {
-    [TAB_ID_FILE_CONVERSION] = {
-        .pTitle = TEXT("文件转换"),
-        .pClass = HAN_FILE_CONVERSION_CLASS,
-        .nWinId = (HMENU)WID_WINDOW_FILE_CONVERSION,
-        .RegisterHANTabWindow = RegisterHANFileConversion,
-        .pIni = &g_cfgHANData.cfgFileConversion,
-    },
-    [TAB_ID_HEX_VIEW] = {
-        .pTitle = TEXT("hex"),
-        .pClass = HAN_HEX_VIEW_CLASS,
-        .nWinId = (HMENU)WID_WINDOW_HEX_VIEW,
-        .RegisterHANTabWindow = RegisterHANHexView,
-        .pIni = NULL,
-    },
-    [TAB_ID_SREC_VIEW] = {
-        .pTitle = TEXT("srec"),
-        .pClass = HAN_SREC_VIEW_CLASS,
-        .nWinId = (HMENU)WID_WINDOW_SREC_VIEW,
-        .RegisterHANTabWindow = RegisterHANSrecView,
-        .pIni = NULL,
-    },
-    [TAB_ID_BIN_VIEW] = {
-        .pTitle = TEXT("bin"),
-        .pClass = HAN_BIN_VIEW_CLASS,
-        .nWinId = (HMENU)WID_WINDOW_BIN_VIEW,
-        .RegisterHANTabWindow = RegisterHANBinView,
-        .pIni = NULL,
-    },
-    [TAB_ID_ASC_VIEW] = {
-        .pTitle = TEXT("asc"),
-        .pClass = HAN_ASC_VIEW_CLASS,
-        .nWinId = (HMENU)WID_WINDOW_ASC_VIEW,
-        .RegisterHANTabWindow = RegisterHANAscView,
-        .pIni = NULL,
-    },
-    [TAB_ID_COM_TOOL] = {
-        .pTitle = TEXT("串口工具"),
-        .pClass = HAN_COM_TOOL_CLASS,
-        .nWinId = (HMENU)WID_WINDOW_ASC_VIEW,
-        .RegisterHANTabWindow = RegisterHANComTool,
-        .pIni = NULL,
-    },
-};
 
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, HANPSTR lpCmdLine, int nCmdShow)
 {
+    (void)hPrevInstance;
+
     int ret = 0;
 
     ReadCfgIniFile();
@@ -160,28 +98,30 @@ static LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             InitCommonControlsEx(&icexInitTab);
 
             g_hTab = CreateWindow(WC_TABCONTROL, TEXT(""), WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
-                0, 0, rcClient.right, rcClient.bottom, 
+                0, 0, rcClient.right, rcClient.bottom,
                 hWnd, (HMENU)WID_WINDOW_TAB, hInst, NULL);
             HFONT hFont = CreateFontIndirect(&g_lfSysFont);
             SendMessage(g_hTab, WM_SETFONT, (WPARAM)hFont, TRUE);
             tiItem.mask = TCIF_TEXT;
 
-            DWORD dwWindowStyle = WS_CHILD | WS_VISIBLE;
-            for (int i = 0; i < TAB_WIN_CNT; i++)
+            DWORD dwWindowStyle;
+            HMENU hDataToolMenu = (HMENU)WID_DATA_TOOL_BASE;
+            for (DATATOOLID i = 0; i < DATA_TOOL_ID_CNT_MAX; i++)
             {
+                dwWindowStyle = WS_CHILD;
+                if (sg_nLastChosenToolId == i) { dwWindowStyle |= WS_VISIBLE; }
+
                 tiItem.pszText = g_tiTabInfo[i].pTitle;
                 TabCtrl_InsertItem(g_hTab, i, &tiItem);
                 g_tiTabInfo[i].RegisterHANTabWindow(hInst);
                 g_tiTabInfo[i].hItem = CreateWindow(g_tiTabInfo[i].pClass, NULL, dwWindowStyle,
                     0, TAB_TITLE_SIZE_H, rcClient.right, rcClient.bottom - TAB_TITLE_SIZE_H,
-                    g_hTab, g_tiTabInfo[i].nWinId, hInst, g_tiTabInfo[i].pIni);
-                dwWindowStyle = WS_CHILD;
+                    g_hTab, hDataToolMenu, hInst, g_tiTabInfo[i].pIni);
+                hDataToolMenu++;
             }
             TabCtrl_SetItemSize(g_hTab, TAB_TITLE_SIZE_W, TAB_TITLE_SIZE_H);
-            TabCtrl_SetCurSel(g_hTab, 0);
-
-            break;
-        }
+            TabCtrl_SetCurSel(g_hTab, sg_nLastChosenToolId);
+        } break;
         case WM_NOTIFY: {
             LPNMHDR pNMHDR = (LPNMHDR)lParam;
             if (WID_WINDOW_TAB == pNMHDR->idFrom)
@@ -189,20 +129,38 @@ static LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
                 switch (((LPNMHDR)lParam)->code) {
                     case TCN_SELCHANGE: {
                         int nPage = TabCtrl_GetCurSel(g_hTab);
-                        for (int i = 0; i < ArrLen(g_tiTabInfo); i++)
+                        for (int i = 0; i < DATA_TOOL_ID_CNT_MAX; i++)
                         {
                             if (nPage == i) { ShowWindow(g_tiTabInfo[i].hItem, SW_SHOW); }
                             else { ShowWindow(g_tiTabInfo[i].hItem, SW_HIDE); }
                         }
+                        sg_nLastChosenToolId = nPage;
                         break;
                     }
                 }
             }
-            break;
-        }
+        } break;
+        case WM_SIZE: {
+            RECT rcClient;
+            GetClientRect(hWnd, &rcClient);
+            MoveWindow(g_hTab, 0, 0, rcClient.right, rcClient.bottom, TRUE);
+            for (DATATOOLID iLoop = 0; iLoop < DATA_TOOL_ID_CNT_MAX; iLoop++)
+            {
+                MoveWindow(g_tiTabInfo[iLoop].hItem,
+                    0, TAB_TITLE_SIZE_H, rcClient.right,
+                    rcClient.bottom - TAB_TITLE_SIZE_H,
+                    TRUE
+                );
+            }
+        } break;
+
+        case WM_CLOSE: {
+            WriteCfgIniFile();
+            return DefWindowProc(hWnd, message, wParam, lParam);
+        } break;
 
         case WM_DESTROY: {
-            WriteCfgIniFile();
+            
             PostQuitMessage(0);
             break;
         }
@@ -214,24 +172,52 @@ static LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     return lWndProcRet;
 }
 
+static void GetIniFileFullPath(HANPSTR pIniFullPath, HANSIZE nLen)
+{
+    GetModuleFileName(NULL, pIniFullPath, nLen);
+    
+    PathRemoveFileSpec(pIniFullPath);
+    HAN_strcat(pIniFullPath, TEXT("\\") CFG_INI_FILE_NAME);
+}
 static void ReadCfgIniFile(void)
 {
-    // HANCHAR pIniPath[PATH_STR_SIZE];
-    // GetCurrentDirectory(PATH_STR_SIZE, pIniPath);
-    // HAN_strcat(pIniPath, TEXT("\\") CFG_INI_FILE_NAME);
+    HANCHAR pIniPath[PATH_STR_SIZE];
+    HANCHAR pText[INI_MAIN_VALUE_STR_SIZE];
+    DATATOOLID iLoop;
 
-    // ReadConvertFileIniFile(&(g_cfgHANData.cfgFileConversion), pIniPath);
+    GetIniFileFullPath(pIniPath, PATH_STR_SIZE);
 
-    GetCurrentDirectory(PATH_STR_SIZE, g_pIniFileName);
-    HAN_strcat(g_pIniFileName, TEXT("\\") CFG_INI_FILE_NAME);
+    GetPrivateProfileString(
+        INI_MAIN_APP_NAME, TEXT("LastChosenTool"), TEXT("0"),
+        pText, INI_MAIN_VALUE_STR_SIZE, pIniPath
+    );
+    sg_nLastChosenToolId = HAN_strtoul(pText, NULL, 10);
 
-    ReadConvertFileIniFile(&(g_cfgHANData.cfgFileConversion), g_pIniFileName);
+    for (iLoop = 0; iLoop < DATA_TOOL_ID_CNT_MAX; iLoop++)
+    {
+        if (NULL != g_tiTabInfo[iLoop].ReadIniFile)
+        {
+            g_tiTabInfo[iLoop].ReadIniFile(pIniPath, g_tiTabInfo[iLoop].pIni);
+        }
+    }
 }
 static void WriteCfgIniFile(void)
 {
     HANCHAR pIniPath[PATH_STR_SIZE];
-    GetCurrentDirectory(PATH_STR_SIZE, pIniPath);
-    HAN_strcat(pIniPath, TEXT("\\") CFG_INI_FILE_NAME);
+    HANCHAR pText[INI_MAIN_VALUE_STR_SIZE];
+    DATATOOLID iLoop;
+
+    GetIniFileFullPath(pIniPath, PATH_STR_SIZE);
+
+    HAN_snprintf(pText, INI_MAIN_VALUE_STR_SIZE, TEXT("%u"), sg_nLastChosenToolId);
+
+    WritePrivateProfileString(INI_MAIN_APP_NAME, TEXT("LastChosenTool"), pText, pIniPath);
     
-    WriteFileConversionCfg(g_tiTabInfo[TAB_ID_FILE_CONVERSION].hItem, pIniPath);
+    for (iLoop = 0; iLoop < DATA_TOOL_ID_CNT_MAX; iLoop++)
+    {
+        if (NULL != g_tiTabInfo[iLoop].ReadIniFile)
+        {
+            g_tiTabInfo[iLoop].WriteIniFile(pIniPath, g_tiTabInfo[iLoop].hItem);
+        }
+    }
 }

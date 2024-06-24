@@ -8,6 +8,9 @@
 
 #define HEX_FILE_EOF_TEXT       ":00000001FF\r\n"
 
+#define INI_HEX_VIEW_VALUE_SIZE         INI_MAIN_VALUE_STR_SIZE
+#define INI_HEX_VIEW_APP_NAME           TEXT("hvConfig")
+
 typedef enum {
     WID_HEX_VIEW_EDIT,
     WID_HEX_MEM_MAP_EDIT,
@@ -50,7 +53,15 @@ typedef struct tagHEXVIEWWNDEXTRA {
     HFONT           hHexFont;
     HFONT           hSysFont;
     BOOL            bHexOpen;
+    HEXVIEWCFG      pHvConfig;
 } HEXVIEWWNDEXTRA, * PHEXVIEWWNDEXTRA;
+
+typedef struct tagHEXVIEWREADWRITECFG {
+    HANPCSTR            pKey;
+    HANPCSTR            pDefValue;
+    void                (*CfgWindowToText)(PHEXVIEWWNDEXTRA bvInfo, HANPSTR pText);
+    void                (*CfgTextToWindow)(PHEXVIEWWNDEXTRA bvInfo, HANPCSTR pText);
+} HEXVIEWREADWRITECFG;
 
 #define HEX_RECORD_TYPE_DATA                        0
 #define HEX_RECORD_TYPE_EOF                         1
@@ -68,6 +79,7 @@ static HAN_errno_t HANTextToHexValue(const char* pText, uint8_t* pHex);
 static LRESULT CALLBACK HexViewWndProc(HWND hHexView, UINT message, WPARAM wParam, LPARAM lParam);
 static void PrintHexView(PHEXVIEWWNDEXTRA hvInfo);
 static LRESULT CreateAction(HWND hWnd, LPARAM lParam);
+static void LoadHexViewCfg(PHEXVIEWWNDEXTRA hvInfo, PHEXVIEWCFG pHvConfig);
 static void CommandAction(HWND hWnd, PHEXVIEWWNDEXTRA hvInfo, WPARAM wParam, LPARAM lParam);
 static void OpenFileAction(PHEXVIEWWNDEXTRA hvInfo);
 static void SaveBinFileAction(PHEXVIEWWNDEXTRA hvInfo);
@@ -79,6 +91,27 @@ static void AppendHexMap(PHEXVIEWWNDEXTRA hvInfo, PADDRMAP pAddrMap);
 static HAN_errno_t SaveFilledHexFileAction(PHEXVIEWWNDEXTRA hvInfo);
 static DWORD PrintHexRecord(char* pText, PHEXRECORD pRecord);
 static DWORD PrintHexRecordLinearAddr(char* pText, uint16_t cAddr);
+
+static void CfgWindowToTextStartAddr(PHEXVIEWWNDEXTRA hvInfo, HANPSTR pText);
+static void CfgWindowToTextEndAddr(PHEXVIEWWNDEXTRA hvInfo, HANPSTR pText);
+
+static void CfgTextToWindowStartAddr(PHEXVIEWWNDEXTRA hvInfo, HANPCSTR pText);
+static void CfgTextToWindowEndAddr(PHEXVIEWWNDEXTRA hvInfo, HANPCSTR pText);
+
+static const HEXVIEWREADWRITECFG sg_pHexViewCfgInfo[INI_HEX_VIEW_CFG_CNT] = {
+    [INI_HEX_VIEW_START_ADDR] = {
+        .pKey = TEXT("StartAddr"),
+        .pDefValue = DEFAULT_START_ADDR_TEXT,
+        .CfgWindowToText = CfgWindowToTextStartAddr,
+        .CfgTextToWindow = CfgTextToWindowStartAddr,
+    },
+    [INI_HEX_VIEW_END_ADDR] = {
+        .pKey = TEXT("EndAddr"),
+        .pDefValue = DEFAULT_END_ADDR_TEXT,
+        .CfgWindowToText = CfgWindowToTextEndAddr,
+        .CfgTextToWindow = CfgTextToWindowEndAddr,
+    },
+};
 
 void RegisterHANHexView(HINSTANCE hInst)
 {
@@ -98,6 +131,37 @@ void RegisterHANHexView(HINSTANCE hInst)
     };
     RegisterClassEx(&wcex);
 }
+
+void ReadHexViewIniFile(HANPCSTR pIniPath, void* pParam)
+{
+    PHEXVIEWCFG pHvConfig = pParam;
+    INIHEXVIEWCFGID iLoop;
+
+    for (iLoop = 0; iLoop < INI_HEX_VIEW_CFG_CNT; iLoop++)
+    {
+        HAN_strcpy(pHvConfig->pSysConfig[iLoop].pKey, sg_pHexViewCfgInfo[iLoop].pKey);
+        HAN_strcpy(pHvConfig->pSysConfig[iLoop].pDefValue, sg_pHexViewCfgInfo[iLoop].pDefValue);
+        GetPrivateProfileString(
+            INI_HEX_VIEW_APP_NAME, pHvConfig->pSysConfig[iLoop].pKey, pHvConfig->pSysConfig[iLoop].pDefValue,
+            pHvConfig->pSysConfig[iLoop].pValue, INI_HEX_VIEW_VALUE_SIZE, pIniPath);
+    }
+}
+
+void WriteHexViewIniFile(HANPCSTR pIniPath, HWND hHexView)
+{
+    PHEXVIEWWNDEXTRA hvInfo = (PHEXVIEWWNDEXTRA)GetWindowLongPtr(hHexView, 0);
+    HANCHAR pBvCfg[INI_HEX_VIEW_CFG_CNT][INI_HEX_VIEW_VALUE_SIZE];
+    INIHEXVIEWCFGID iLoop;
+    
+    for (iLoop = 0; iLoop < INI_HEX_VIEW_CFG_CNT; iLoop++)
+    {
+        sg_pHexViewCfgInfo[iLoop].CfgWindowToText(hvInfo, pBvCfg[iLoop]);
+        WritePrivateProfileString(
+            INI_HEX_VIEW_APP_NAME, sg_pHexViewCfgInfo[iLoop].pKey, pBvCfg[iLoop], pIniPath
+        );
+    }
+}
+
 void BinDataToHexFile(HANDLE hFile, uint32_t cStartAddr, uint8_t* pBinData, uint32_t nLen)
 {
     uint16_t cLinearAddr = (cStartAddr >> (uint32_t)16) & (uint32_t)0x0000FFFF;
@@ -137,6 +201,7 @@ void BinDataToHexFile(HANDLE hFile, uint32_t cStartAddr, uint8_t* pBinData, uint
     }
     WriteFile(hFile, HEX_FILE_EOF_TEXT, strlen(HEX_FILE_EOF_TEXT), NULL, NULL);
 }
+
 void LinkHexFile(HANPCSTR pFileDest, HANCHAR pFileSrc[LINK_FILE_CNT_MAX][PATH_STR_SIZE], uint32_t nLen)
 {
     HANDLE hDest;
@@ -407,6 +472,7 @@ static LRESULT CreateAction(HWND hWnd, LPARAM lParam)
     LRESULT lWndProcRet = 0;
     PHEXVIEWWNDEXTRA hvInfo;
     HINSTANCE hInst = ((LPCREATESTRUCT)lParam)->hInstance;
+    PHEXVIEWCFG pHvConfig = ((LPCREATESTRUCT)lParam)->lpCreateParams;
     RECT rcClientSize;
 
     HANDLE hHeap = GetProcessHeap();
@@ -507,12 +573,29 @@ static LRESULT CreateAction(HWND hWnd, LPARAM lParam)
         SendMessage(hvInfo->hLinkFileLink, WM_SETFONT, (WPARAM)(hvInfo->hSysFont), (LPARAM)TRUE);
 
         hvInfo->bHexOpen = FALSE;
+
+        if (NULL != pHvConfig)
+        {
+            (void)memcpy(&(hvInfo->pHvConfig), pHvConfig, sizeof(hvInfo->pHvConfig));
+            LoadHexViewCfg(hvInfo, pHvConfig);
+        }
     }
 
     return lWndProcRet;
 }
+static void LoadHexViewCfg(PHEXVIEWWNDEXTRA hvInfo, PHEXVIEWCFG pHvConfig)
+{
+    INIHEXVIEWCFGID iLoop;
+
+    for (iLoop = 0; iLoop < INI_HEX_VIEW_CFG_CNT; iLoop++)
+    {
+        sg_pHexViewCfgInfo[iLoop].CfgTextToWindow(hvInfo, pHvConfig->pSysConfig[iLoop].pValue);
+    }
+}
 static void CommandAction(HWND hWnd, PHEXVIEWWNDEXTRA hvInfo, WPARAM wParam, LPARAM lParam)
 {
+    (void)lParam;
+
     switch (LOWORD(wParam)) {
         case WID_OPEN_HEX_FILE_BUTTON: {
             OpenFileAction(hvInfo);
@@ -610,7 +693,7 @@ static void SaveBinFileAction(PHEXVIEWWNDEXTRA hvInfo)
 }
 static void AddLinkFileAction(PHEXVIEWWNDEXTRA hvInfo)
 {
-    HANCHAR pText[PATH_STR_SIZE];
+    HANCHAR pText[PATH_STR_SIZE] = { 0 };
     OPENFILENAME ofnOpenFile;
     ZeroMemory(&ofnOpenFile, sizeof(ofnOpenFile));
     ofnOpenFile.lStructSize = sizeof(ofnOpenFile);
@@ -623,6 +706,10 @@ static void AddLinkFileAction(PHEXVIEWWNDEXTRA hvInfo)
     if (GetOpenFileName(&ofnOpenFile))
     {
         ListBoxAddString(hvInfo->hLinkFileList, pText);
+    }
+    else
+    {
+        printf("%lu\n", GetLastError());
     }
 }
 static void SubLinkFileAction(PHEXVIEWWNDEXTRA hvInfo)
@@ -639,7 +726,7 @@ static void LinkLinkFileAction(PHEXVIEWWNDEXTRA hvInfo)
     OPENFILENAME ofnOpenFile;
 
     if (nListStrCnt < nForMax) { nForMax = nListStrCnt; }
-    for (uint32_t i = 0; i < nForMax; i++)
+    for (int i = 0; i < nForMax; i++)
     {
         SendMessage(hvInfo->hLinkFileList, LB_GETTEXT, (WPARAM)i, (LPARAM)(pFileName[i]));
     }
@@ -786,4 +873,40 @@ static DWORD PrintHexRecordLinearAddr(char* pText, uint16_t cAddr)
     hrHexRecord.pData[0] = (cAddr >> (uint16_t)8) & (uint16_t)0x00FF;
     hrHexRecord.pData[1] = cAddr & (uint16_t)0x00FF;
     return PrintHexRecord(pText, &hrHexRecord);
+}
+
+static void CfgWindowToTextStartAddr(PHEXVIEWWNDEXTRA hvInfo, HANPSTR pText)
+{
+    HANCHAR pTempText[INI_HEX_VIEW_VALUE_SIZE];
+    HANSIZE cAddr;
+
+    GetWindowText(hvInfo->hStartAddrEdit, pTempText, INI_HEX_VIEW_VALUE_SIZE);
+    cAddr = HAN_strtoul(pTempText, NULL, 16);
+    HAN_snprintf(pText, INI_HEX_VIEW_VALUE_SIZE, ADDR_PRINT_FORMAT_SINGLE, cAddr);
+}
+static void CfgWindowToTextEndAddr(PHEXVIEWWNDEXTRA hvInfo, HANPSTR pText)
+{
+    HANCHAR pTempText[INI_HEX_VIEW_VALUE_SIZE];
+    HANSIZE cAddr;
+
+    GetWindowText(hvInfo->hEndAddrEdit, pTempText, INI_HEX_VIEW_VALUE_SIZE);
+    cAddr = HAN_strtoul(pTempText, NULL, 16);
+    HAN_snprintf(pText, INI_HEX_VIEW_VALUE_SIZE, ADDR_PRINT_FORMAT_SINGLE, cAddr);
+}
+
+static void CfgTextToWindowStartAddr(PHEXVIEWWNDEXTRA hvInfo, HANPCSTR pText)
+{
+    HANSIZE cAddr = HAN_strtoul(pText, NULL, 16);
+    HANCHAR pTempText[ADDR_STR_SIZE];
+
+    HAN_snprintf(pTempText, ADDR_STR_SIZE, ADDR_PRINT_FORMAT_FULL, cAddr);
+    SetWindowText(hvInfo->hStartAddrEdit, pTempText);
+}
+static void CfgTextToWindowEndAddr(PHEXVIEWWNDEXTRA hvInfo, HANPCSTR pText)
+{
+    HANSIZE cAddr = HAN_strtoul(pText, NULL, 16);
+    HANCHAR pTempText[ADDR_STR_SIZE];
+
+    HAN_snprintf(pTempText, ADDR_STR_SIZE, ADDR_PRINT_FORMAT_FULL, cAddr);
+    SetWindowText(hvInfo->hEndAddrEdit, pTempText);
 }
